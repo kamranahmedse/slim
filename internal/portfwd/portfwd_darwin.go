@@ -65,10 +65,14 @@ func (d *DarwinPortFwd) Enable() error {
 		}
 	}
 
-	cmd := exec.Command("sudo", "pfctl", "-ef", "/etc/pf.conf")
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("enabling pfctl: %w", err)
+	// Enable pf if not already running, then load rules.
+	// -e exits 1 if already enabled, so ignore that error.
+	exec.Command("sudo", "pfctl", "-e").Run()
+
+	cmd := exec.Command("sudo", "pfctl", "-f", "/etc/pf.conf")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("loading pfctl rules: %s: %w", strings.TrimSpace(string(output)), err)
 	}
 
 	return nil
@@ -90,7 +94,7 @@ func (d *DarwinPortFwd) Disable() error {
 	conf = strings.ReplaceAll(conf, anchorRule+"\n", "")
 
 	sudoWrite("/etc/pf.conf", conf)
-	exec.Command("sudo", "pfctl", "-ef", "/etc/pf.conf").Run()
+	exec.Command("sudo", "pfctl", "-f", "/etc/pf.conf").Run()
 	return nil
 }
 
