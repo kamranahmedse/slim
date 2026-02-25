@@ -30,7 +30,7 @@ func buildHandler(cfg *config.Config) http.Handler {
 
 		target := &url.URL{
 			Scheme: "http",
-			Host:   fmt.Sprintf("127.0.0.1:%d", domain.Port),
+			Host:   fmt.Sprintf("localhost:%d", domain.Port),
 		}
 
 		proxy := &httputil.ReverseProxy{
