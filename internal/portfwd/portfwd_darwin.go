@@ -23,8 +23,8 @@ func New() PortForwarder {
 }
 
 func (d *DarwinPortFwd) Enable() error {
-	if err := os.WriteFile(anchorFile, []byte(pfRules), 0644); err != nil {
-		return fmt.Errorf("writing pf anchor: %w (try running with sudo)", err)
+	if err := sudoWrite(anchorFile, pfRules); err != nil {
+		return fmt.Errorf("writing pf anchor: %w", err)
 	}
 
 	pfConf, err := os.ReadFile("/etc/pf.conf")
@@ -60,21 +60,22 @@ func (d *DarwinPortFwd) Enable() error {
 	}
 
 	if needsUpdate {
-		if err := os.WriteFile("/etc/pf.conf", []byte(conf), 0644); err != nil {
+		if err := sudoWrite("/etc/pf.conf", conf); err != nil {
 			return fmt.Errorf("writing pf.conf: %w", err)
 		}
 	}
 
 	cmd := exec.Command("sudo", "pfctl", "-ef", "/etc/pf.conf")
-	if output, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("enabling pfctl: %s: %w", string(output), err)
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("enabling pfctl: %w", err)
 	}
 
 	return nil
 }
 
 func (d *DarwinPortFwd) Disable() error {
-	os.Remove(anchorFile)
+	exec.Command("sudo", "rm", "-f", anchorFile).Run()
 
 	pfConf, err := os.ReadFile("/etc/pf.conf")
 	if err != nil {
@@ -88,8 +89,7 @@ func (d *DarwinPortFwd) Disable() error {
 	conf = strings.ReplaceAll(conf, anchorLoad+"\n", "")
 	conf = strings.ReplaceAll(conf, anchorRule+"\n", "")
 
-	os.WriteFile("/etc/pf.conf", []byte(conf), 0644)
-
+	sudoWrite("/etc/pf.conf", conf)
 	exec.Command("sudo", "pfctl", "-ef", "/etc/pf.conf").Run()
 	return nil
 }
@@ -97,4 +97,21 @@ func (d *DarwinPortFwd) Disable() error {
 func (d *DarwinPortFwd) IsEnabled() bool {
 	_, err := os.Stat(anchorFile)
 	return err == nil
+}
+
+func sudoWrite(path string, content string) error {
+	err := os.WriteFile(path, []byte(content), 0644)
+	if err == nil {
+		return nil
+	}
+
+	if !os.IsPermission(err) {
+		return err
+	}
+
+	cmd := exec.Command("sudo", "tee", path)
+	cmd.Stdin = strings.NewReader(content)
+	cmd.Stdout = nil
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
 }
