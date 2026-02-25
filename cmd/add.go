@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/kamrify/localname/internal/config"
+	"github.com/kamrify/localname/internal/hostfile"
 	"github.com/spf13/cobra"
 )
 
@@ -24,6 +25,11 @@ var addCmd = &cobra.Command{
 
 		if err := cfg.AddDomain(name, addPort); err != nil {
 			return err
+		}
+
+		if err := hostfile.Add(name); err != nil {
+			fmt.Printf("Warning: could not update /etc/hosts: %v\n", err)
+			fmt.Println("  Run with sudo to enable local hostname resolution.")
 		}
 
 		fmt.Printf("Added %s.local → localhost:%d\n", name, addPort)

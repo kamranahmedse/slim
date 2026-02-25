@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/kamrify/localname/internal/config"
+	"github.com/kamrify/localname/internal/hostfile"
 	"github.com/spf13/cobra"
 )
 
@@ -23,6 +24,8 @@ var removeCmd = &cobra.Command{
 		if err := cfg.RemoveDomain(name); err != nil {
 			return err
 		}
+
+		hostfile.Remove(name)
 
 		fmt.Printf("Removed %s.local\n", name)
 		return nil

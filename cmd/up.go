@@ -10,6 +10,7 @@ import (
 	"github.com/kamrify/localname/internal/cert"
 	"github.com/kamrify/localname/internal/config"
 	"github.com/kamrify/localname/internal/log"
+	"github.com/kamrify/localname/internal/mdns"
 	"github.com/kamrify/localname/internal/proxy"
 	"github.com/spf13/cobra"
 )
@@ -34,6 +35,13 @@ var upCmd = &cobra.Command{
 
 		srv := proxy.NewServer(cfg, ":10080", ":10443")
 
+		responder := mdns.New()
+		for _, d := range cfg.Domains {
+			if err := responder.Register(d.Name, d.Port); err != nil {
+				log.Error("mDNS registration failed for %s: %v", d.Name, err)
+			}
+		}
+
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
@@ -43,6 +51,7 @@ var upCmd = &cobra.Command{
 		go func() {
 			<-sigCh
 			log.Info("Shutting down...")
+			responder.Shutdown(ctx)
 			cancel()
 			srv.Shutdown(ctx)
 		}()
