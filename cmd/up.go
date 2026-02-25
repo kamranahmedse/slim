@@ -1,19 +1,15 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
-	"os"
-	"os/signal"
-	"syscall"
 
 	"github.com/kamrify/localname/internal/cert"
 	"github.com/kamrify/localname/internal/config"
-	"github.com/kamrify/localname/internal/log"
-	"github.com/kamrify/localname/internal/mdns"
-	"github.com/kamrify/localname/internal/proxy"
+	"github.com/kamrify/localname/internal/daemon"
 	"github.com/spf13/cobra"
 )
+
+var detach bool
 
 var upCmd = &cobra.Command{
 	Use:   "up",
@@ -29,37 +25,21 @@ var upCmd = &cobra.Command{
 		}
 
 		if len(cfg.Domains) == 0 {
-			log.Info("No domains configured. Add one with 'localname add <name> --port <port>'")
-			return nil
+			return fmt.Errorf("no domains configured — add one with 'localname add <name> --port <port>'")
 		}
 
-		srv := proxy.NewServer(cfg, ":10080", ":10443")
-
-		responder := mdns.New()
-		for _, d := range cfg.Domains {
-			if err := responder.Register(d.Name, d.Port); err != nil {
-				log.Error("mDNS registration failed for %s: %v", d.Name, err)
-			}
+		if daemon.IsRunning() {
+			return fmt.Errorf("localname is already running — use 'localname down' to stop it first")
 		}
 
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
-
-		sigCh := make(chan os.Signal, 1)
-		signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
-
-		go func() {
-			<-sigCh
-			log.Info("Shutting down...")
-			responder.Shutdown(ctx)
-			cancel()
-			srv.Shutdown(ctx)
-		}()
-
-		return srv.Start()
+		if detach {
+			return daemon.RunDetached()
+		}
+		return daemon.RunForeground()
 	},
 }
 
 func init() {
+	upCmd.Flags().BoolVarP(&detach, "detach", "d", false, "Run in the background")
 	rootCmd.AddCommand(upCmd)
 }
