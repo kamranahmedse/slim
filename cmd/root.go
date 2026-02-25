@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"strings"
+
 	"github.com/spf13/cobra"
 )
 
@@ -20,4 +22,10 @@ mDNS for LAN access, and WebSocket passthrough for HMR.
 
 func Execute() error {
 	return rootCmd.Execute()
+}
+
+func normalizeName(input string) string {
+	input = strings.TrimSuffix(input, ".local")
+	input = strings.TrimSuffix(input, ".")
+	return strings.ToLower(input)
 }

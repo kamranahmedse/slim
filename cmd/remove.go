@@ -15,7 +15,7 @@ var removeCmd = &cobra.Command{
 	Short:   "Remove a domain mapping",
 	Args:    cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		name := args[0]
+		name := normalizeName(args[0])
 
 		cfg, err := config.Load()
 		if err != nil {

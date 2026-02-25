@@ -18,7 +18,7 @@ var addCmd = &cobra.Command{
 	Long:  `Add a .local domain that maps to a local port. For example, "localname add myapp --port 3000" maps myapp.local to localhost:3000.`,
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		name := args[0]
+		name := normalizeName(args[0])
 
 		cfg, err := config.Load()
 		if err != nil {
