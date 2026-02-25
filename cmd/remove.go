@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/kamrify/localname/internal/config"
+	"github.com/kamrify/localname/internal/daemon"
 	"github.com/kamrify/localname/internal/hostfile"
 	"github.com/spf13/cobra"
 )
@@ -26,6 +27,10 @@ var removeCmd = &cobra.Command{
 		}
 
 		hostfile.Remove(name)
+
+		if daemon.IsRunning() {
+			daemon.SendIPC(daemon.Request{Type: daemon.MsgReload})
+		}
 
 		fmt.Printf("Removed %s.local\n", name)
 		return nil

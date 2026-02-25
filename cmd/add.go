@@ -1,9 +1,11 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/kamrify/localname/internal/config"
+	"github.com/kamrify/localname/internal/daemon"
 	"github.com/kamrify/localname/internal/hostfile"
 	"github.com/spf13/cobra"
 )
@@ -30,6 +32,11 @@ var addCmd = &cobra.Command{
 		if err := hostfile.Add(name); err != nil {
 			fmt.Printf("Warning: could not update /etc/hosts: %v\n", err)
 			fmt.Println("  Run with sudo to enable local hostname resolution.")
+		}
+
+		if daemon.IsRunning() {
+			data, _ := json.Marshal(daemon.DomainData{Name: name, Port: addPort})
+			daemon.SendIPC(daemon.Request{Type: daemon.MsgReload, Data: data})
 		}
 
 		fmt.Printf("Added %s.local → localhost:%d\n", name, addPort)

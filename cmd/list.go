@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"text/tabwriter"
@@ -8,6 +9,8 @@ import (
 	"github.com/kamrify/localname/internal/config"
 	"github.com/spf13/cobra"
 )
+
+var listJSON bool
 
 var listCmd = &cobra.Command{
 	Use:     "list",
@@ -17,6 +20,12 @@ var listCmd = &cobra.Command{
 		cfg, err := config.Load()
 		if err != nil {
 			return err
+		}
+
+		if listJSON {
+			data, _ := json.MarshalIndent(cfg.Domains, "", "  ")
+			fmt.Println(string(data))
+			return nil
 		}
 
 		if len(cfg.Domains) == 0 {
@@ -36,5 +45,6 @@ var listCmd = &cobra.Command{
 }
 
 func init() {
+	listCmd.Flags().BoolVar(&listJSON, "json", false, "Output as JSON")
 	rootCmd.AddCommand(listCmd)
 }

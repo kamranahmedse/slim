@@ -10,12 +10,18 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var statusJSON bool
+
 var statusCmd = &cobra.Command{
 	Use:   "status",
 	Short: "Show the running state and domain health",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if !daemon.IsRunning() {
-			fmt.Println("localname is not running.")
+			if statusJSON {
+				fmt.Println(`{"running": false}`)
+			} else {
+				fmt.Println("localname is not running.")
+			}
 			return nil
 		}
 
@@ -30,6 +36,12 @@ var statusCmd = &cobra.Command{
 
 		var status daemon.StatusData
 		json.Unmarshal(resp.Data, &status)
+
+		if statusJSON {
+			data, _ := json.MarshalIndent(status, "", "  ")
+			fmt.Println(string(data))
+			return nil
+		}
 
 		fmt.Printf("localname is running (PID %d)\n\n", status.PID)
 
@@ -54,5 +66,6 @@ var statusCmd = &cobra.Command{
 }
 
 func init() {
+	statusCmd.Flags().BoolVar(&statusJSON, "json", false, "Output as JSON")
 	rootCmd.AddCommand(statusCmd)
 }
