@@ -39,12 +39,28 @@ func buildHandler(s *Server) http.Handler {
 			return
 		}
 
+		if origin := r.Header.Get("Origin"); origin != "" {
+			setCORSHeaders(w, origin)
+			if r.Method == http.MethodOptions {
+				w.WriteHeader(http.StatusNoContent)
+				return
+			}
+		}
+
 		start := time.Now()
 		recorder := &statusRecorder{ResponseWriter: w, status: 200}
 		route.proxy.ServeHTTP(recorder, r)
 
 		log.Request(host, r.Method, r.URL.RequestURI(), route.port, recorder.status, time.Since(start))
 	})
+}
+
+func setCORSHeaders(w http.ResponseWriter, origin string) {
+	w.Header().Set("Access-Control-Allow-Origin", origin)
+	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD")
+	w.Header().Set("Access-Control-Allow-Headers", "Accept, Authorization, Content-Type, X-Requested-With")
+	w.Header().Set("Access-Control-Allow-Credentials", "true")
+	w.Header().Set("Access-Control-Max-Age", "86400")
 }
 
 func newDomainProxy(port int, transport *http.Transport) *httputil.ReverseProxy {
