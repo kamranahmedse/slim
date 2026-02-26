@@ -46,7 +46,8 @@ func init() {
 }
 
 func normalizeName(input string) string {
-	input = strings.TrimSuffix(input, ".local")
+	input = strings.ToLower(strings.TrimSpace(input))
 	input = strings.TrimSuffix(input, ".")
-	return strings.ToLower(input)
+	input = strings.TrimSuffix(input, ".local")
+	return strings.TrimSuffix(input, ".")
 }
