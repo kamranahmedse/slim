@@ -2,8 +2,8 @@ import { defineConfig } from 'astro/config';
 import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
-  site: 'https://kamranahmedse.github.io',
-  base: '/slim',
+  site: 'https://slim.sh',
+  base: '/',
   output: 'static',
   outDir: './dist',
   vite: {
