@@ -52,18 +52,32 @@ First run handles all setup automatically (CA generation, keychain trust, port f
 ## Usage
 
 ```bash
-slim start myapp --port 3000    # start proxying a domain
-slim start api -p 8080          # add another
-slim start myapp -p 3000 --log-mode minimal  # access logs: full|minimal|off
-slim start myapp -p 3000 --wait --timeout 30s # wait for upstream readiness
-slim list                       # see what's running + health
-slim list --json                # JSON output
-slim logs                       # tail request logs
-slim logs -f myapp              # follow logs for one domain
-slim logs --flush               # clear access logs
-slim stop myapp                 # stop one domain
-slim stop                       # stop everything
-slim version                    # print version
+# Start proxying domains
+slim start myapp --port 3000
+slim start api -p 8080
+
+# Optional start flags
+# Access logs: full | minimal | off
+slim start myapp -p 3000 --log-mode minimal
+
+# Wait for upstream readiness before returning
+slim start myapp -p 3000 --wait --timeout 30s
+
+# Inspect running domains
+slim list
+slim list --json
+
+# Access logs with or without tail
+slim logs
+slim logs -f myapp
+slim logs --flush
+
+# Stop proxying one or all
+slim stop myapp
+slim stop
+
+# Version
+slim version
 ```
 
 ### Uninstall
