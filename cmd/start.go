@@ -1,17 +1,13 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
-	"os"
-	"os/signal"
-	"syscall"
 
 	"github.com/kamrify/localname/internal/cert"
 	"github.com/kamrify/localname/internal/config"
 	"github.com/kamrify/localname/internal/daemon"
 	"github.com/kamrify/localname/internal/hostfile"
-	"github.com/kamrify/localname/internal/log"
+	"github.com/kamrify/localname/internal/portfwd"
 	"github.com/spf13/cobra"
 )
 
@@ -20,26 +16,17 @@ var startPort int
 var startCmd = &cobra.Command{
 	Use:   "start [name] --port [port]",
 	Short: "Start proxying a domain",
-	Long: `Add a .local domain and start the proxy in one step.
+	Long: `Map a .local domain to a local port and start proxying.
+Runs first-time setup automatically if needed.
 
   localname start myapp --port 3000
-  # https://myapp.local → localhost:3000
-
-On Ctrl+C the domain is removed and the proxy stops if no other
-domains are active.`,
+  # https://myapp.local → localhost:3000`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name := normalizeName(args[0])
 
-		if !cert.CAExists() {
-			log.Info("Running first-time setup...")
-			if err := cert.GenerateCA(); err != nil {
-				return err
-			}
-			if err := cert.TrustCA(); err != nil {
-				return fmt.Errorf("trusting CA: %w", err)
-			}
-			log.Info("Root CA generated and trusted.")
+		if err := ensureSetup(); err != nil {
+			return err
 		}
 
 		cfg, err := config.Load()
@@ -47,90 +34,59 @@ domains are active.`,
 			return err
 		}
 
-		existing, _ := cfg.FindDomain(name)
-		if existing != nil {
-			if existing.Port != startPort {
-				cfg.RemoveDomain(name)
-				existing = nil
-			}
-		}
-
-		if existing == nil {
-			if err := cfg.AddDomain(name, startPort); err != nil {
-				return err
-			}
+		if err := cfg.SetDomain(name, startPort); err != nil {
+			return err
 		}
 
 		hostfile.Add(name)
 
-		if daemon.IsRunning() {
-			return attachToRunningDaemon(name, startPort)
+		if !cert.LeafExists(name) {
+			if err := cert.GenerateLeafCert(name); err != nil {
+				return fmt.Errorf("generating certificate: %w", err)
+			}
 		}
 
-		return runAndCleanup(name)
+		if !daemon.IsRunning() {
+			if err := daemon.RunDetached(); err != nil {
+				return fmt.Errorf("starting daemon: %w", err)
+			}
+			if err := daemon.WaitForDaemon(); err != nil {
+				return err
+			}
+		} else {
+			daemon.SendIPC(daemon.Request{Type: daemon.MsgReload})
+		}
+
+		fmt.Printf("https://%s.local → localhost:%d\n", name, startPort)
+		return nil
 	},
 }
 
-func attachToRunningDaemon(name string, port int) error {
-	data, _ := json.Marshal(daemon.DomainData{Name: name, Port: port})
-	daemon.SendIPC(daemon.Request{Type: daemon.MsgReload, Data: data})
+func ensureSetup() error {
+	if !cert.CAExists() {
+		fmt.Print("First-time setup: generating root CA... ")
+		if err := cert.GenerateCA(); err != nil {
+			return err
+		}
+		fmt.Println("done")
 
-	log.Info("https://%s.local → localhost:%d", name, port)
-	log.Info("Proxy is already running, domain added. Press Ctrl+C to remove it.")
+		fmt.Println("Trusting root CA (you may be prompted for your password)...")
+		if err := cert.TrustCA(); err != nil {
+			return fmt.Errorf("trusting CA: %w", err)
+		}
+	}
 
-	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
-	<-sigCh
+	pf := portfwd.New()
+	if !pf.IsEnabled() {
+		fmt.Print("Setting up port forwarding (80→10080, 443→10443)... ")
+		if err := pf.Enable(); err != nil {
+			fmt.Printf("skipped (%v)\n", err)
+		} else {
+			fmt.Println("done")
+		}
+	}
 
-	cleanup(name)
 	return nil
-}
-
-func runAndCleanup(name string) error {
-	cleanup := func() {
-		cleanupDomain(name)
-	}
-
-	// Override the default signal handler in daemon.run() so we can
-	// clean up our domain first. We do this by deferring cleanup
-	// since daemon.RunForeground blocks until shutdown.
-	defer cleanup()
-
-	return daemon.RunForeground()
-}
-
-func cleanup(name string) {
-	log.Info("Removing %s.local...", name)
-
-	cfg, err := config.Load()
-	if err != nil {
-		return
-	}
-
-	cfg.RemoveDomain(name)
-	hostfile.Remove(name)
-
-	if daemon.IsRunning() {
-		daemon.SendIPC(daemon.Request{Type: daemon.MsgReload})
-
-		reloaded, err := config.Load()
-		if err != nil {
-			return
-		}
-		if len(reloaded.Domains) == 0 {
-			daemon.SendIPC(daemon.Request{Type: daemon.MsgShutdown})
-		}
-	}
-}
-
-func cleanupDomain(name string) {
-	cfg, err := config.Load()
-	if err != nil {
-		return
-	}
-
-	cfg.RemoveDomain(name)
-	hostfile.Remove(name)
 }
 
 func init() {

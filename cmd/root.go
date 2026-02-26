@@ -15,8 +15,11 @@ var rootCmd = &cobra.Command{
 	Long: `localname maps custom .local domains to local dev server ports with HTTPS,
 mDNS for LAN access, and WebSocket passthrough for HMR.
 
-  localname start myapp --port 3000
-  # https://myapp.local → localhost:3000`,
+  localname start myapp --port 3000    # start proxying
+  localname start api --port 8080      # add another domain
+  localname list                       # see what's running
+  localname stop myapp                 # stop one domain
+  localname stop                       # stop everything`,
 }
 
 func Execute() error {

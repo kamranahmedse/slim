@@ -9,7 +9,6 @@ import (
 	"github.com/kamrify/localname/internal/daemon"
 	"github.com/kamrify/localname/internal/hostfile"
 	"github.com/kamrify/localname/internal/portfwd"
-	"github.com/kamrify/localname/internal/service"
 	"github.com/spf13/cobra"
 )
 
@@ -22,13 +21,6 @@ var uninstallCmd = &cobra.Command{
 		if daemon.IsRunning() {
 			fmt.Print("  Stopping daemon... ")
 			daemon.SendIPC(daemon.Request{Type: daemon.MsgShutdown})
-			fmt.Println("done")
-		}
-
-		svc := service.New()
-		if svc.IsInstalled() {
-			fmt.Print("  Removing service... ")
-			svc.Uninstall()
 			fmt.Println("done")
 		}
 

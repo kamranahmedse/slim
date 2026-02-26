@@ -67,9 +67,22 @@ func (c *Config) FindDomain(name string) (*Domain, int) {
 	return nil, -1
 }
 
+func LogPath() string {
+	return filepath.Join(Dir(), "access.log")
+}
+
 func (c *Config) AddDomain(name string, port int) error {
 	if existing, _ := c.FindDomain(name); existing != nil {
 		return fmt.Errorf("domain %s.local already exists (port %d)", name, existing.Port)
+	}
+	c.Domains = append(c.Domains, Domain{Name: name, Port: port})
+	return c.Save()
+}
+
+func (c *Config) SetDomain(name string, port int) error {
+	if existing, idx := c.FindDomain(name); existing != nil {
+		c.Domains[idx].Port = port
+		return c.Save()
 	}
 	c.Domains = append(c.Domains, Domain{Name: name, Port: port})
 	return c.Save()

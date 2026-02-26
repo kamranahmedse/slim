@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"strconv"
 	"syscall"
+	"time"
 
 	godaemon "github.com/sevlyar/go-daemon"
 
@@ -31,10 +32,6 @@ func IsRunning() bool {
 	return resp.OK
 }
 
-func RunForeground() error {
-	return run()
-}
-
 func RunDetached() error {
 	if err := os.MkdirAll(config.Dir(), 0755); err != nil {
 		return err
@@ -54,7 +51,6 @@ func RunDetached() error {
 	}
 
 	if child != nil {
-		log.Info("Daemon started (PID %d)", child.Pid)
 		return nil
 	}
 
@@ -62,23 +58,32 @@ func RunDetached() error {
 	return run()
 }
 
+func WaitForDaemon() error {
+	for i := 0; i < 50; i++ {
+		if IsRunning() {
+			return nil
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	return fmt.Errorf("daemon failed to start within 5 seconds")
+}
+
 func run() error {
+	if err := log.SetOutput(config.LogPath()); err != nil {
+		return fmt.Errorf("opening log file: %w", err)
+	}
+	defer log.Close()
+
 	cfg, err := config.Load()
 	if err != nil {
 		return err
-	}
-
-	if len(cfg.Domains) == 0 {
-		return fmt.Errorf("no domains configured")
 	}
 
 	srv := proxy.NewServer(cfg, ":10080", ":10443")
 
 	responder := mdns.New()
 	for _, d := range cfg.Domains {
-		if err := responder.Register(d.Name, d.Port); err != nil {
-			log.Error("mDNS registration failed for %s: %v", d.Name, err)
-		}
+		responder.Register(d.Name, d.Port)
 	}
 
 	ipc, err := NewIPCServer(func(req Request) Response {
@@ -89,7 +94,6 @@ func run() error {
 	}
 	go ipc.Serve()
 
-	// Write PID file for foreground mode too
 	os.WriteFile(PidPath(), []byte(strconv.Itoa(os.Getpid())), 0644)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -100,7 +104,6 @@ func run() error {
 
 	go func() {
 		<-sigCh
-		log.Info("Shutting down...")
 		responder.Shutdown(ctx)
 		ipc.Close()
 		cancel()

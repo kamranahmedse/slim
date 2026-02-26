@@ -2,53 +2,79 @@ package log
 
 import (
 	"fmt"
+	"os"
+	"sync"
 	"time"
 )
 
 const (
-	reset   = "\033[0m"
-	dim     = "\033[2m"
-	green   = "\033[32m"
-	yellow  = "\033[33m"
-	red     = "\033[31m"
-	cyan    = "\033[36m"
-	magenta = "\033[35m"
+	Reset   = "\033[0m"
+	Dim     = "\033[2m"
+	Green   = "\033[32m"
+	Yellow  = "\033[33m"
+	Red     = "\033[31m"
+	Cyan    = "\033[36m"
+	Magenta = "\033[35m"
 )
 
-func colorForStatus(code int) string {
+var (
+	logFile *os.File
+	mu      sync.Mutex
+)
+
+func SetOutput(path string) error {
+	mu.Lock()
+	defer mu.Unlock()
+
+	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return err
+	}
+	logFile = f
+	return nil
+}
+
+func Close() {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if logFile != nil {
+		logFile.Close()
+		logFile = nil
+	}
+}
+
+func ColorForStatus(code int) string {
 	switch {
 	case code >= 500:
-		return red
+		return Red
 	case code >= 400:
-		return yellow
+		return Yellow
 	case code >= 300:
-		return cyan
+		return Cyan
 	default:
-		return green
+		return Green
 	}
 }
 
 func Request(domain string, method string, path string, upstream int, status int, duration time.Duration) {
 	ts := time.Now().Format("15:04:05")
-	statusColor := colorForStatus(status)
+	dur := formatDuration(duration)
 
-	fmt.Printf("%s%s%s %s%s%s %s %s → %s:%d%s %s%d%s %s%s%s\n",
-		dim, ts, reset,
-		magenta, domain, reset,
-		method,
-		path,
-		dim, upstream, reset,
-		statusColor, status, reset,
-		dim, formatDuration(duration), reset,
-	)
+	mu.Lock()
+	if logFile != nil {
+		fmt.Fprintf(logFile, "%s\t%s\t%s\t%s\t%d\t%d\t%s\n",
+			ts, domain, method, path, upstream, status, dur)
+	}
+	mu.Unlock()
 }
 
 func Info(format string, args ...interface{}) {
-	fmt.Printf("%s[localname]%s %s\n", cyan, reset, fmt.Sprintf(format, args...))
+	fmt.Printf("%s[localname]%s %s\n", Cyan, Reset, fmt.Sprintf(format, args...))
 }
 
 func Error(format string, args ...interface{}) {
-	fmt.Printf("%s[localname]%s %s\n", red, reset, fmt.Sprintf(format, args...))
+	fmt.Printf("%s[localname]%s %s\n", Red, Reset, fmt.Sprintf(format, args...))
 }
 
 func formatDuration(d time.Duration) string {
