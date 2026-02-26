@@ -11,12 +11,14 @@ dashboard.local → localhost:5173
 ## Install
 
 ```bash
-go install github.com/kamrify/localname@latest
+curl -sL https://raw.githubusercontent.com/kamranahmedse/localname/main/install.sh | sh
 ```
 
 Or build from source:
 
 ```bash
+git clone https://github.com/kamranahmedse/localname.git
+cd localname
 make build
 make install
 ```
