@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/kamrify/localname/cmd"
+	"github.com/kamranahmedse/localname/cmd"
 )
 
 func main() {

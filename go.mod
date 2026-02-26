@@ -1,4 +1,4 @@
-module github.com/kamrify/localname
+module github.com/kamranahmedse/localname
 
 go 1.25.0
 

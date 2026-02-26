@@ -10,9 +10,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kamrify/localname/internal/cert"
-	"github.com/kamrify/localname/internal/config"
-	"github.com/kamrify/localname/internal/log"
+	"github.com/kamranahmedse/localname/internal/cert"
+	"github.com/kamranahmedse/localname/internal/config"
+	"github.com/kamranahmedse/localname/internal/log"
 )
 
 const (

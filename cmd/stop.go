@@ -3,9 +3,9 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/kamrify/localname/internal/config"
-	"github.com/kamrify/localname/internal/daemon"
-	"github.com/kamrify/localname/internal/hostfile"
+	"github.com/kamranahmedse/localname/internal/config"
+	"github.com/kamranahmedse/localname/internal/daemon"
+	"github.com/kamranahmedse/localname/internal/hostfile"
 	"github.com/spf13/cobra"
 )
 

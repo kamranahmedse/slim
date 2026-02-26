@@ -8,7 +8,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/kamrify/localname/internal/osutil"
+	"github.com/kamranahmedse/localname/internal/osutil"
 )
 
 const anchorName = "com.localname"

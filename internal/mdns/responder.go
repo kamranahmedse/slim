@@ -6,7 +6,7 @@ import (
 	"sync"
 
 	"github.com/grandcat/zeroconf"
-	"github.com/kamrify/localname/internal/log"
+	"github.com/kamranahmedse/localname/internal/log"
 )
 
 type Responder struct {

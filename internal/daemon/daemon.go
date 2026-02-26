@@ -12,11 +12,11 @@ import (
 
 	godaemon "github.com/sevlyar/go-daemon"
 
-	"github.com/kamrify/localname/internal/cert"
-	"github.com/kamrify/localname/internal/config"
-	"github.com/kamrify/localname/internal/log"
-	"github.com/kamrify/localname/internal/mdns"
-	"github.com/kamrify/localname/internal/proxy"
+	"github.com/kamranahmedse/localname/internal/cert"
+	"github.com/kamranahmedse/localname/internal/config"
+	"github.com/kamranahmedse/localname/internal/log"
+	"github.com/kamranahmedse/localname/internal/mdns"
+	"github.com/kamranahmedse/localname/internal/proxy"
 )
 
 func IsRunning() bool {

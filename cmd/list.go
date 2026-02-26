@@ -6,10 +6,10 @@ import (
 	"os"
 	"text/tabwriter"
 
-	"github.com/kamrify/localname/internal/config"
-	"github.com/kamrify/localname/internal/daemon"
-	"github.com/kamrify/localname/internal/log"
-	"github.com/kamrify/localname/internal/proxy"
+	"github.com/kamranahmedse/localname/internal/config"
+	"github.com/kamranahmedse/localname/internal/daemon"
+	"github.com/kamranahmedse/localname/internal/log"
+	"github.com/kamranahmedse/localname/internal/proxy"
 	"github.com/spf13/cobra"
 )
 

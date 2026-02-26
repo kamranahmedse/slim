@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kamrify/localname/internal/config"
-	"github.com/kamrify/localname/internal/log"
+	"github.com/kamranahmedse/localname/internal/config"
+	"github.com/kamranahmedse/localname/internal/log"
 )
 
 func buildHandler(cfg *config.Config) http.Handler {

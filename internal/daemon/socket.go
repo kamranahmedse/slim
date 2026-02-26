@@ -7,7 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/kamrify/localname/internal/config"
+	"github.com/kamranahmedse/localname/internal/config"
 )
 
 func SocketPath() string {

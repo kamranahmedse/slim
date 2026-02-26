@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/kamrify/localname/internal/cert"
-	"github.com/kamrify/localname/internal/config"
-	"github.com/kamrify/localname/internal/daemon"
-	"github.com/kamrify/localname/internal/hostfile"
-	"github.com/kamrify/localname/internal/portfwd"
+	"github.com/kamranahmedse/localname/internal/cert"
+	"github.com/kamranahmedse/localname/internal/config"
+	"github.com/kamranahmedse/localname/internal/daemon"
+	"github.com/kamranahmedse/localname/internal/hostfile"
+	"github.com/kamranahmedse/localname/internal/portfwd"
 	"github.com/spf13/cobra"
 )
 

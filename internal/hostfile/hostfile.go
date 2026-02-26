@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/kamrify/localname/internal/osutil"
+	"github.com/kamranahmedse/localname/internal/osutil"
 )
 
 const hostsPath = "/etc/hosts"
