@@ -38,7 +38,7 @@ func GenerateCA() error {
 		return fmt.Errorf("creating CA dir: %w", err)
 	}
 
-	key, err := rsa.GenerateKey(rand.Reader, 4096)
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		return fmt.Errorf("generating CA key: %w", err)
 	}
