@@ -9,6 +9,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var (
+	configWithLockStopFn = config.WithLock
+	configLoadStopFn     = config.Load
+	systemRemoveHostFn   = system.RemoveHost
+	daemonIsRunningFn    = daemon.IsRunning
+	daemonSendIPCFn      = daemon.SendIPC
+)
+
 var stopCmd = &cobra.Command{
 	Use:   "stop [name]",
 	Short: "Stop proxying a domain, or stop everything",
@@ -28,8 +36,8 @@ var stopCmd = &cobra.Command{
 func stopOne(name string) error {
 	var remainingDomains int
 
-	if err := config.WithLock(func() error {
-		cfg, err := config.Load()
+	if err := configWithLockStopFn(func() error {
+		cfg, err := configLoadStopFn()
 		if err != nil {
 			return err
 		}
@@ -47,18 +55,18 @@ func stopOne(name string) error {
 		return err
 	}
 
-	if err := system.RemoveHost(name); err != nil {
+	if err := systemRemoveHostFn(name); err != nil {
 		return fmt.Errorf("updating /etc/hosts: %w", err)
 	}
 
-	if daemon.IsRunning() {
+	if daemonIsRunningFn() {
 		if remainingDomains == 0 {
-			if _, err := daemon.SendIPC(daemon.Request{Type: daemon.MsgShutdown}); err != nil {
+			if _, err := daemonSendIPCFn(daemon.Request{Type: daemon.MsgShutdown}); err != nil {
 				return fmt.Errorf("stopping daemon: %w", err)
 			}
 			fmt.Printf("Stopped %s.local (daemon shut down)\n", name)
 		} else {
-			if _, err := daemon.SendIPC(daemon.Request{Type: daemon.MsgReload}); err != nil {
+			if _, err := daemonSendIPCFn(daemon.Request{Type: daemon.MsgReload}); err != nil {
 				return fmt.Errorf("reloading daemon: %w", err)
 			}
 			fmt.Printf("Stopped %s.local\n", name)
@@ -73,8 +81,8 @@ func stopOne(name string) error {
 func stopAll() error {
 	var domains []config.Domain
 
-	if err := config.WithLock(func() error {
-		cfg, err := config.Load()
+	if err := configWithLockStopFn(func() error {
+		cfg, err := configLoadStopFn()
 		if err != nil {
 			return err
 		}
@@ -88,19 +96,19 @@ func stopAll() error {
 		return err
 	}
 
-	if len(domains) == 0 && !daemon.IsRunning() {
+	if len(domains) == 0 && !daemonIsRunningFn() {
 		fmt.Println("Nothing is running.")
 		return nil
 	}
 
 	for _, d := range domains {
-		if err := system.RemoveHost(d.Name); err != nil {
+		if err := systemRemoveHostFn(d.Name); err != nil {
 			fmt.Printf("Warning: failed to remove %s.local from /etc/hosts: %v\n", d.Name, err)
 		}
 	}
 
-	if daemon.IsRunning() {
-		if _, err := daemon.SendIPC(daemon.Request{Type: daemon.MsgShutdown}); err != nil {
+	if daemonIsRunningFn() {
+		if _, err := daemonSendIPCFn(daemon.Request{Type: daemon.MsgShutdown}); err != nil {
 			return fmt.Errorf("stopping daemon: %w", err)
 		}
 	}

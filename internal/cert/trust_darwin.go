@@ -8,8 +8,10 @@ import (
 	"strings"
 )
 
+var execCommandDarwinFn = exec.Command
+
 func TrustCA() error {
-	cmd := exec.Command("sudo", "security", "add-trusted-cert",
+	cmd := execCommandDarwinFn("sudo", "security", "add-trusted-cert",
 		"-d", "-r", "trustRoot",
 		"-k", "/Library/Keychains/System.keychain",
 		CACertPath(),
@@ -23,7 +25,7 @@ func TrustCA() error {
 }
 
 func UntrustCA() error {
-	cmd := exec.Command("sudo", "security", "remove-trusted-cert",
+	cmd := execCommandDarwinFn("sudo", "security", "remove-trusted-cert",
 		"-d", CACertPath(),
 	)
 	output, err := cmd.CombinedOutput()
