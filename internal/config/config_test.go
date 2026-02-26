@@ -103,3 +103,21 @@ func TestConfigLifecycle(t *testing.T) {
 		t.Fatal("expected error removing nonexistent domain")
 	}
 }
+
+func TestLogMode(t *testing.T) {
+	cfg := &Config{}
+	if got := cfg.EffectiveLogMode(); got != LogModeFull {
+		t.Fatalf("expected default log mode %q, got %q", LogModeFull, got)
+	}
+
+	valid := []string{"", "full", "minimal", "off", " Full "}
+	for _, mode := range valid {
+		if err := ValidateLogMode(mode); err != nil {
+			t.Fatalf("ValidateLogMode(%q) error: %v", mode, err)
+		}
+	}
+
+	if err := ValidateLogMode("verbose"); err == nil {
+		t.Fatal("expected error for invalid log mode")
+	}
+}

@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"syscall"
 
 	"gopkg.in/yaml.v3"
@@ -15,6 +16,10 @@ var validName = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]*[a-z0-9])?$`)
 const (
 	ProxyHTTPPort  = 10080
 	ProxyHTTPSPort = 10443
+
+	LogModeFull    = "full"
+	LogModeMinimal = "minimal"
+	LogModeOff     = "off"
 )
 
 type Domain struct {
@@ -24,6 +29,7 @@ type Domain struct {
 
 type Config struct {
 	Domains []Domain `yaml:"domains"`
+	LogMode string   `yaml:"log_mode,omitempty"`
 }
 
 var baseDir string
@@ -71,6 +77,27 @@ func ValidateDomain(name string, port int) error {
 		return fmt.Errorf("invalid port %d: must be between 1 and 65535", port)
 	}
 	return nil
+}
+
+func ValidateLogMode(mode string) error {
+	switch normalizeLogMode(mode) {
+	case LogModeFull, LogModeMinimal, LogModeOff:
+		return nil
+	default:
+		return fmt.Errorf("invalid log mode %q: must be one of full|minimal|off", mode)
+	}
+}
+
+func normalizeLogMode(mode string) string {
+	mode = strings.ToLower(strings.TrimSpace(mode))
+	if mode == "" {
+		return LogModeFull
+	}
+	return mode
+}
+
+func (c *Config) EffectiveLogMode() string {
+	return normalizeLogMode(c.LogMode)
 }
 
 func Load() (*Config, error) {

@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"sync"
 	"syscall"
 	"time"
 
@@ -67,19 +68,22 @@ func WaitForDaemon() error {
 }
 
 func run() error {
-	if err := log.SetOutput(config.LogPath()); err != nil {
-		return fmt.Errorf("opening log file: %w", err)
-	}
-	defer log.Close()
-
 	cfg, err := config.Load()
 	if err != nil {
 		return err
 	}
 
+	if err := log.SetOutput(config.LogPath(), cfg.EffectiveLogMode()); err != nil {
+		return fmt.Errorf("opening log file: %w", err)
+	}
+	defer log.Close()
+
 	srv := proxy.NewServer(cfg)
 
 	responder := newMDNSResponder()
+	if err := responder.refreshNetworkInfo(); err != nil {
+		log.Error("mDNS: failed to enumerate network interfaces: %v", err)
+	}
 	for _, d := range cfg.Domains {
 		if err := responder.register(d.Name, d.Port); err != nil {
 			log.Error("mDNS registration failed for %s: %v", d.Name, err)
@@ -141,13 +145,25 @@ func handleStatus() Response {
 		return Response{OK: false, Error: err.Error()}
 	}
 
-	var domains []DomainInfo
-	for _, d := range cfg.Domains {
-		domains = append(domains, DomainInfo{
-			Name:    d.Name,
-			Port:    d.Port,
-			Healthy: proxy.CheckUpstream(d.Port),
-		})
+	domains := make([]DomainInfo, len(cfg.Domains))
+	health := make([]bool, len(cfg.Domains))
+
+	var wg sync.WaitGroup
+	sem := make(chan struct{}, 16)
+	for i, d := range cfg.Domains {
+		domains[i] = DomainInfo{Name: d.Name, Port: d.Port}
+		wg.Add(1)
+		go func(idx int, port int) {
+			defer wg.Done()
+			sem <- struct{}{}
+			health[idx] = proxy.CheckUpstream(port)
+			<-sem
+		}(i, d.Port)
+	}
+	wg.Wait()
+
+	for i := range domains {
+		domains[i].Healthy = health[i]
 	}
 
 	status := StatusData{
@@ -167,8 +183,14 @@ func handleReload(srv *proxy.Server, responder *mdnsResponder) Response {
 	if err != nil {
 		return Response{OK: false, Error: err.Error()}
 	}
+	if err := log.SetOutput(config.LogPath(), cfg.EffectiveLogMode()); err != nil {
+		return Response{OK: false, Error: err.Error()}
+	}
 
 	responder.shutdown()
+	if err := responder.refreshNetworkInfo(); err != nil {
+		log.Error("mDNS: failed to enumerate network interfaces: %v", err)
+	}
 	for _, d := range cfg.Domains {
 		if err := responder.register(d.Name, d.Port); err != nil {
 			log.Error("mDNS registration failed for %s: %v", d.Name, err)

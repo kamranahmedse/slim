@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"sync"
 	"text/tabwriter"
 
 	"github.com/kamranahmedse/localname/internal/config"
@@ -45,11 +46,25 @@ var listCmd = &cobra.Command{
 				Domain: d.Name + ".local",
 				Port:   d.Port,
 			}
-			if running {
-				h := proxy.CheckUpstream(d.Port)
-				e.Healthy = &h
-			}
 			entries[i] = e
+		}
+		if running {
+			health := make([]bool, len(cfg.Domains))
+			var wg sync.WaitGroup
+			sem := make(chan struct{}, 16)
+			for i, d := range cfg.Domains {
+				wg.Add(1)
+				go func(idx int, port int) {
+					defer wg.Done()
+					sem <- struct{}{}
+					health[idx] = proxy.CheckUpstream(port)
+					<-sem
+				}(i, d.Port)
+			}
+			wg.Wait()
+			for i := range entries {
+				entries[i].Healthy = &health[i]
+			}
 		}
 
 		if listJSON {

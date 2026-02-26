@@ -13,55 +13,85 @@ import (
 	"github.com/kamranahmedse/localname/internal/log"
 )
 
+type domainRoute struct {
+	port  int
+	proxy *httputil.ReverseProxy
+}
+
 func buildHandler(s *Server) http.Handler {
-	transport := http.DefaultTransport.(*http.Transport).Clone()
-
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		host := r.Host
-		if idx := strings.IndexByte(host, ':'); idx != -1 {
-			host = host[:idx]
-		}
-
-		name := strings.TrimSuffix(host, ".local")
-		s.cfgMu.RLock()
-		domain, _ := s.cfg.FindDomain(name)
-		var port int
-		if domain != nil {
-			port = domain.Port
-		}
-		s.cfgMu.RUnlock()
-		if domain == nil {
+		host := normalizeHost(r.Host)
+		name, ok := localDomainFromHost(host)
+		if !ok {
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
 			w.WriteHeader(http.StatusNotFound)
 			fmt.Fprintf(w, notFoundPage, host)
 			return
 		}
 
-		target := &url.URL{
-			Scheme: "http",
-			Host:   fmt.Sprintf("localhost:%d", port),
-		}
-
-		rp := &httputil.ReverseProxy{
-			Transport: transport,
-			Rewrite: func(pr *httputil.ProxyRequest) {
-				pr.SetURL(target)
-				pr.Out.Host = pr.In.Host
-			},
-			FlushInterval: -1,
-			ErrorHandler: func(w http.ResponseWriter, r *http.Request, err error) {
-				w.Header().Set("Content-Type", "text/html; charset=utf-8")
-				w.WriteHeader(http.StatusBadGateway)
-				fmt.Fprintf(w, upstreamDownPage, host, port, port)
-			},
+		s.cfgMu.RLock()
+		route, found := s.routes[name]
+		s.cfgMu.RUnlock()
+		if !found {
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			w.WriteHeader(http.StatusNotFound)
+			fmt.Fprintf(w, notFoundPage, host)
+			return
 		}
 
 		start := time.Now()
 		recorder := &statusRecorder{ResponseWriter: w, status: 200}
-		rp.ServeHTTP(recorder, r)
+		route.proxy.ServeHTTP(recorder, r)
 
-		log.Request(host, r.Method, r.URL.Path, port, recorder.status, time.Since(start))
+		log.Request(host, r.Method, r.URL.RequestURI(), route.port, recorder.status, time.Since(start))
 	})
+}
+
+func newDomainProxy(port int, transport *http.Transport) *httputil.ReverseProxy {
+	target := &url.URL{
+		Scheme: "http",
+		Host:   fmt.Sprintf("localhost:%d", port),
+	}
+
+	return &httputil.ReverseProxy{
+		Transport: transport,
+		Rewrite: func(pr *httputil.ProxyRequest) {
+			pr.SetURL(target)
+			pr.Out.Host = pr.In.Host
+		},
+		ErrorHandler: func(w http.ResponseWriter, r *http.Request, err error) {
+			host := normalizeHost(r.Host)
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			w.WriteHeader(http.StatusBadGateway)
+			fmt.Fprintf(w, upstreamDownPage, host, port, port)
+		},
+	}
+}
+
+func normalizeHost(host string) string {
+	host = strings.ToLower(strings.TrimSpace(host))
+	host = strings.TrimSuffix(host, ".")
+
+	if parsedHost, _, err := net.SplitHostPort(host); err == nil {
+		host = parsedHost
+	} else if strings.Count(host, ":") == 1 {
+		if idx := strings.LastIndex(host, ":"); idx != -1 {
+			host = host[:idx]
+		}
+	}
+
+	host = strings.Trim(host, "[]")
+	return strings.TrimSuffix(host, ".")
+}
+
+func localDomainFromHost(host string) (string, bool) {
+	host = normalizeHost(host)
+	if !strings.HasSuffix(host, ".local") {
+		return "", false
+	}
+
+	name := strings.TrimSuffix(host, ".local")
+	return name, name != ""
 }
 
 type statusRecorder struct {

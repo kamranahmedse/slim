@@ -74,6 +74,32 @@ var logsCmd = &cobra.Command{
 
 func formatLogLine(line string) string {
 	parts := strings.Split(line, "\t")
+	if len(parts) == 4 {
+		ts := parts[0]
+		domain := parts[1]
+		status := parts[2]
+		duration := parts[3]
+
+		statusColor := log.Green
+		if len(status) > 0 {
+			switch status[0] {
+			case '5':
+				statusColor = log.Red
+			case '4':
+				statusColor = log.Yellow
+			case '3':
+				statusColor = log.Cyan
+			}
+		}
+
+		return fmt.Sprintf("%s%s%s %s%s%s %s%s%s %s%s%s",
+			log.Dim, ts, log.Reset,
+			log.Magenta, domain, log.Reset,
+			statusColor, status, log.Reset,
+			log.Dim, duration, log.Reset,
+		)
+	}
+
 	if len(parts) < 7 {
 		return line
 	}

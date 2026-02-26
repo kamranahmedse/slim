@@ -1,8 +1,9 @@
 package cert
 
 import (
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
@@ -45,7 +46,7 @@ func GenerateLeafCert(name string) error {
 		return fmt.Errorf("creating certs dir: %w", err)
 	}
 
-	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		return fmt.Errorf("generating leaf key: %w", err)
 	}
@@ -88,7 +89,11 @@ func GenerateLeafCert(name string) error {
 		return err
 	}
 	defer keyFile.Close()
-	if err := pem.Encode(keyFile, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(key)}); err != nil {
+	keyDER, err := x509.MarshalECPrivateKey(key)
+	if err != nil {
+		return fmt.Errorf("encoding leaf key: %w", err)
+	}
+	if err := pem.Encode(keyFile, &pem.Block{Type: "EC PRIVATE KEY", Bytes: keyDER}); err != nil {
 		return fmt.Errorf("writing leaf key: %w", err)
 	}
 
@@ -104,13 +109,13 @@ func LoadLeafTLS(name string) (*tls.Certificate, error) {
 }
 
 func EnsureLeafCert(name string) error {
-	if LeafExists(name) && !leafExpiringSoon(name) {
+	if LeafExists(name) && !leafNeedsRenewal(name) {
 		return nil
 	}
 	return GenerateLeafCert(name)
 }
 
-func leafExpiringSoon(name string) bool {
+func leafNeedsRenewal(name string) bool {
 	data, err := os.ReadFile(LeafCertPath(name))
 	if err != nil {
 		return true
@@ -123,6 +128,10 @@ func leafExpiringSoon(name string) bool {
 
 	cert, err := x509.ParseCertificate(block.Bytes)
 	if err != nil {
+		return true
+	}
+
+	if cert.PublicKeyAlgorithm != x509.ECDSA {
 		return true
 	}
 

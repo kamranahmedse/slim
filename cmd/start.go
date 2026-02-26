@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/kamranahmedse/localname/internal/cert"
 	"github.com/kamranahmedse/localname/internal/config"
@@ -11,6 +12,7 @@ import (
 )
 
 var startPort int
+var startLogMode string
 
 var startCmd = &cobra.Command{
 	Use:   "start [name] --port [port]",
@@ -27,6 +29,11 @@ Runs first-time setup automatically if needed.
 		if err := config.ValidateDomain(name, startPort); err != nil {
 			return err
 		}
+		if startLogMode != "" {
+			if err := config.ValidateLogMode(startLogMode); err != nil {
+				return err
+			}
+		}
 
 		if err := ensureSetup(); err != nil {
 			return err
@@ -36,6 +43,9 @@ Runs first-time setup automatically if needed.
 			cfg, err := config.Load()
 			if err != nil {
 				return err
+			}
+			if startLogMode != "" {
+				cfg.LogMode = strings.ToLower(strings.TrimSpace(startLogMode))
 			}
 			return cfg.SetDomain(name, startPort)
 		}); err != nil {
@@ -97,6 +107,7 @@ func ensureSetup() error {
 
 func init() {
 	startCmd.Flags().IntVarP(&startPort, "port", "p", 0, "Local port to proxy to (required)")
+	startCmd.Flags().StringVar(&startLogMode, "log-mode", "", "Access log mode: full|minimal|off")
 	startCmd.MarkFlagRequired("port")
 	rootCmd.AddCommand(startCmd)
 }

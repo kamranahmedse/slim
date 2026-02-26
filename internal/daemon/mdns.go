@@ -10,6 +10,8 @@ import (
 
 type mdnsResponder struct {
 	servers []*zeroconf.Server
+	ifaces  []net.Interface
+	ips     []string
 	mu      sync.Mutex
 }
 
@@ -23,12 +25,16 @@ func (r *mdnsResponder) register(name string, port int) error {
 
 	hostname := name + ".local."
 
-	ifaces, err := getActiveInterfaces()
-	if err != nil {
-		return err
+	if len(r.ifaces) == 0 {
+		ifaces, err := getActiveInterfaces()
+		if err != nil {
+			return err
+		}
+		r.ifaces = ifaces
 	}
-
-	ips := getLocalIPs()
+	if len(r.ips) == 0 {
+		r.ips = getLocalIPs()
+	}
 
 	srv, err := zeroconf.RegisterProxy(
 		name,
@@ -36,9 +42,9 @@ func (r *mdnsResponder) register(name string, port int) error {
 		"local.",
 		port,
 		hostname,
-		ips,
+		r.ips,
 		[]string{"localname=true"},
-		ifaces,
+		r.ifaces,
 	)
 	if err != nil {
 		return err
@@ -57,6 +63,20 @@ func (r *mdnsResponder) shutdown() {
 		srv.Shutdown()
 	}
 	r.servers = nil
+}
+
+func (r *mdnsResponder) refreshNetworkInfo() error {
+	ifaces, err := getActiveInterfaces()
+	if err != nil {
+		return err
+	}
+	ips := getLocalIPs()
+
+	r.mu.Lock()
+	r.ifaces = ifaces
+	r.ips = ips
+	r.mu.Unlock()
+	return nil
 }
 
 func getLocalIPs() []string {

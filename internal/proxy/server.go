@@ -6,13 +6,13 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/kamranahmedse/localname/internal/cert"
 	"github.com/kamranahmedse/localname/internal/config"
 	"github.com/kamranahmedse/localname/internal/log"
+	"golang.org/x/sync/singleflight"
 )
 
 var (
@@ -21,59 +21,93 @@ var (
 )
 
 type Server struct {
-	cfg        *config.Config
-	cfgMu      sync.RWMutex
-	httpAddr   string
-	httpsAddr  string
-	httpServer *http.Server
-	tlsServer  *http.Server
-	certCache  map[string]*tls.Certificate
-	certMu     sync.RWMutex
+	cfg           *config.Config
+	cfgMu         sync.RWMutex
+	routes        map[string]*domainRoute
+	knownDomains  map[string]struct{}
+	defaultDomain string
+	httpAddr      string
+	httpsAddr     string
+	httpServer    *http.Server
+	tlsServer     *http.Server
+	transport     *http.Transport
+	certCache     map[string]*tls.Certificate
+	certMu        sync.RWMutex
+	certGroup     singleflight.Group
 }
 
 func NewServer(cfg *config.Config) *Server {
 	return &Server{
-		cfg:       cfg,
-		httpAddr:  HTTPAddr,
-		httpsAddr: HTTPSAddr,
-		certCache: make(map[string]*tls.Certificate),
+		cfg:          cfg,
+		httpAddr:     HTTPAddr,
+		httpsAddr:    HTTPSAddr,
+		transport:    newUpstreamTransport(),
+		routes:       make(map[string]*domainRoute),
+		knownDomains: make(map[string]struct{}),
+		certCache:    make(map[string]*tls.Certificate),
 	}
 }
 
 func (s *Server) getCertificate(hello *tls.ClientHelloInfo) (*tls.Certificate, error) {
-	name := strings.TrimSuffix(hello.ServerName, ".local")
-
-	s.certMu.RLock()
-	if c, ok := s.certCache[name]; ok {
-		s.certMu.RUnlock()
-		return c, nil
+	var name string
+	if hello.ServerName == "" {
+		name = s.defaultConfiguredDomain()
+		if name == "" {
+			return nil, fmt.Errorf("no domains configured")
+		}
+	} else {
+		var ok bool
+		name, ok = localDomainFromHost(hello.ServerName)
+		if !ok {
+			return nil, fmt.Errorf("unsupported server name %q", hello.ServerName)
+		}
 	}
-	s.certMu.RUnlock()
 
-	if err := cert.EnsureLeafCert(name); err != nil {
-		return nil, fmt.Errorf("ensuring cert for %s: %w", name, err)
+	if !s.isKnownDomain(name) {
+		return nil, fmt.Errorf("domain %s.local is not configured", name)
 	}
 
-	tlsCert, err := cert.LoadLeafTLS(name)
+	if tlsCert := s.cachedCertificate(name); tlsCert != nil {
+		return tlsCert, nil
+	}
+
+	val, err, _ := s.certGroup.Do(name, func() (any, error) {
+		if tlsCert := s.cachedCertificate(name); tlsCert != nil {
+			return tlsCert, nil
+		}
+
+		if err := cert.EnsureLeafCert(name); err != nil {
+			return nil, fmt.Errorf("ensuring cert for %s: %w", name, err)
+		}
+
+		tlsCert, err := cert.LoadLeafTLS(name)
+		if err != nil {
+			return nil, err
+		}
+
+		s.certMu.Lock()
+		s.certCache[name] = tlsCert
+		s.certMu.Unlock()
+
+		return tlsCert, nil
+	})
 	if err != nil {
 		return nil, err
 	}
 
-	s.certMu.Lock()
-	s.certCache[name] = tlsCert
-	s.certMu.Unlock()
-
+	tlsCert, ok := val.(*tls.Certificate)
+	if !ok {
+		return nil, fmt.Errorf("invalid certificate cache entry for %s", name)
+	}
 	return tlsCert, nil
 }
 
 func (s *Server) Start() error {
-	handler := buildHandler(s)
-
-	for _, d := range s.cfg.Domains {
-		if err := cert.EnsureLeafCert(d.Name); err != nil {
-			return fmt.Errorf("ensuring cert for %s: %w", d.Name, err)
-		}
+	if err := s.applyConfig(s.cfg); err != nil {
+		return err
 	}
+
+	handler := buildHandler(s)
 
 	s.httpServer = &http.Server{
 		Addr:              s.httpAddr,
@@ -113,7 +147,11 @@ func (s *Server) Start() error {
 	log.Info("HTTP  listening on %s (redirects to HTTPS)", s.httpAddr)
 	log.Info("HTTPS listening on %s", s.httpsAddr)
 
-	for _, d := range s.cfg.Domains {
+	s.cfgMu.RLock()
+	domains := append([]config.Domain(nil), s.cfg.Domains...)
+	s.cfgMu.RUnlock()
+
+	for _, d := range domains {
 		log.Info("  %s.local → localhost:%d", d.Name, d.Port)
 	}
 
@@ -153,19 +191,78 @@ func (s *Server) ReloadConfig() (*config.Config, error) {
 		return nil, err
 	}
 
-	for _, d := range cfg.Domains {
-		if err := cert.EnsureLeafCert(d.Name); err != nil {
-			return nil, err
+	if err := s.applyConfig(cfg); err != nil {
+		return nil, err
+	}
+
+	return cfg, nil
+}
+
+func (s *Server) applyConfig(cfg *config.Config) error {
+	routes := make(map[string]*domainRoute, len(cfg.Domains))
+	knownDomains := make(map[string]struct{}, len(cfg.Domains))
+	certCache := make(map[string]*tls.Certificate, len(cfg.Domains))
+	defaultDomain := ""
+
+	for i, d := range cfg.Domains {
+		if i == 0 {
+			defaultDomain = d.Name
 		}
+
+		if err := cert.EnsureLeafCert(d.Name); err != nil {
+			return fmt.Errorf("ensuring cert for %s: %w", d.Name, err)
+		}
+		tlsCert, err := cert.LoadLeafTLS(d.Name)
+		if err != nil {
+			return fmt.Errorf("loading cert for %s: %w", d.Name, err)
+		}
+
+		routes[d.Name] = &domainRoute{
+			port:  d.Port,
+			proxy: newDomainProxy(d.Port, s.transport),
+		}
+		knownDomains[d.Name] = struct{}{}
+		certCache[d.Name] = tlsCert
 	}
 
 	s.cfgMu.Lock()
 	s.cfg = cfg
+	s.routes = routes
+	s.knownDomains = knownDomains
+	s.defaultDomain = defaultDomain
 	s.cfgMu.Unlock()
 
 	s.certMu.Lock()
-	s.certCache = make(map[string]*tls.Certificate)
+	s.certCache = certCache
 	s.certMu.Unlock()
 
-	return cfg, nil
+	return nil
+}
+
+func (s *Server) cachedCertificate(name string) *tls.Certificate {
+	s.certMu.RLock()
+	defer s.certMu.RUnlock()
+	return s.certCache[name]
+}
+
+func (s *Server) isKnownDomain(name string) bool {
+	s.cfgMu.RLock()
+	defer s.cfgMu.RUnlock()
+	_, ok := s.knownDomains[name]
+	return ok
+}
+
+func (s *Server) defaultConfiguredDomain() string {
+	s.cfgMu.RLock()
+	defer s.cfgMu.RUnlock()
+	return s.defaultDomain
+}
+
+func newUpstreamTransport() *http.Transport {
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.MaxIdleConns = 512
+	transport.MaxIdleConnsPerHost = 128
+	transport.MaxConnsPerHost = 256
+	transport.IdleConnTimeout = 120 * time.Second
+	return transport
 }

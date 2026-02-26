@@ -41,6 +41,7 @@ First run handles all setup automatically (CA generation, keychain trust, port f
 ```bash
 localname start myapp --port 3000    # start proxying a domain
 localname start api -p 8080          # add another
+localname start myapp -p 3000 --log-mode minimal  # access logs: full|minimal|off
 localname list                       # see what's running + health
 localname logs                       # tail request logs
 localname logs -f myapp              # follow logs for one domain
@@ -67,6 +68,14 @@ localname uninstall   # removes everything: CA, certs, hosts entries, pfctl rule
 ## Configuration
 
 Config lives at `~/.localname/config.yaml`. Certificates in `~/.localname/certs/`, root CA in `~/.localname/ca/`, logs in `~/.localname/access.log`.
+
+Set access logging mode globally (persisted in config) with:
+
+```bash
+localname start myapp --port 3000 --log-mode full     # default
+localname start myapp --port 3000 --log-mode minimal
+localname start myapp --port 3000 --log-mode off
+```
 
 ## Requirements
 
