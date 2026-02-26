@@ -93,8 +93,15 @@ func (d *DarwinPortFwd) Disable() error {
 	conf = strings.ReplaceAll(conf, anchorLoad+"\n", "")
 	conf = strings.ReplaceAll(conf, anchorRule+"\n", "")
 
-	osutil.WriteFileElevated("/etc/pf.conf", conf)
-	exec.Command("sudo", "pfctl", "-f", "/etc/pf.conf").Run()
+	if err := osutil.WriteFileElevated("/etc/pf.conf", conf); err != nil {
+		return fmt.Errorf("writing pf.conf: %w", err)
+	}
+
+	cmd := exec.Command("sudo", "pfctl", "-f", "/etc/pf.conf")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("reloading pfctl: %s: %w", strings.TrimSpace(string(output)), err)
+	}
+
 	return nil
 }
 

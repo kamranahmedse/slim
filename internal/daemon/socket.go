@@ -11,11 +11,11 @@ import (
 )
 
 func SocketPath() string {
-	return filepath.Join(config.Dir(), "localname.sock")
+	return config.SocketPath()
 }
 
 func PidPath() string {
-	return filepath.Join(config.Dir(), "localname.pid")
+	return config.PidPath()
 }
 
 type IPCServer struct {

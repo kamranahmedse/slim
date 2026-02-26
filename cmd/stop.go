@@ -35,7 +35,9 @@ func stopOne(name string) error {
 		return fmt.Errorf("%s.local is not running", name)
 	}
 
-	cfg.RemoveDomain(name)
+	if err := cfg.RemoveDomain(name); err != nil {
+		return err
+	}
 	hostfile.Remove(name)
 
 	if daemon.IsRunning() {
@@ -69,7 +71,9 @@ func stopAll() error {
 	}
 
 	cfg.Domains = nil
-	cfg.Save()
+	if err := cfg.Save(); err != nil {
+		return err
+	}
 
 	if daemon.IsRunning() {
 		daemon.SendIPC(daemon.Request{Type: daemon.MsgShutdown})

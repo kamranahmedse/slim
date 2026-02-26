@@ -19,6 +19,7 @@ var listCmd = &cobra.Command{
 	Use:     "list",
 	Aliases: []string{"ls"},
 	Short:   "List all domains and their status",
+	Args:    cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := config.Load()
 		if err != nil {
@@ -52,7 +53,10 @@ var listCmd = &cobra.Command{
 		}
 
 		if listJSON {
-			data, _ := json.MarshalIndent(entries, "", "  ")
+			data, err := json.MarshalIndent(entries, "", "  ")
+			if err != nil {
+				return fmt.Errorf("marshaling JSON: %w", err)
+			}
 			fmt.Println(string(data))
 			return nil
 		}

@@ -37,7 +37,7 @@ func RunDetached() error {
 		return err
 	}
 
-	cntxt := &godaemon.Context{
+	daemonCtx := &godaemon.Context{
 		PidFileName: PidPath(),
 		PidFilePerm: 0644,
 		LogFileName: "",
@@ -45,7 +45,7 @@ func RunDetached() error {
 		Umask:       027,
 	}
 
-	child, err := cntxt.Reborn()
+	child, err := daemonCtx.Reborn()
 	if err != nil {
 		return fmt.Errorf("daemonize: %w", err)
 	}
@@ -54,7 +54,7 @@ func RunDetached() error {
 		return nil
 	}
 
-	defer cntxt.Release()
+	defer daemonCtx.Release()
 	return run()
 }
 
@@ -162,7 +162,10 @@ func handleStatus() Response {
 		PID:     os.Getpid(),
 		Domains: domains,
 	}
-	data, _ := json.Marshal(status)
+	data, err := json.Marshal(status)
+	if err != nil {
+		return Response{OK: false, Error: err.Error()}
+	}
 	return Response{OK: true, Data: data}
 }
 
@@ -171,7 +174,10 @@ func handleReload(srv *proxy.Server, responder *mdns.Responder) Response {
 		return Response{OK: false, Error: err.Error()}
 	}
 
-	cfg, _ := config.Load()
+	cfg, err := config.Load()
+	if err != nil {
+		return Response{OK: false, Error: err.Error()}
+	}
 	responder.Shutdown(context.Background())
 	for _, d := range cfg.Domains {
 		responder.Register(d.Name, d.Port)

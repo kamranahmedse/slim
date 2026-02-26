@@ -33,6 +33,14 @@ func LogPath() string {
 	return filepath.Join(Dir(), "access.log")
 }
 
+func SocketPath() string {
+	return filepath.Join(Dir(), "localname.sock")
+}
+
+func PidPath() string {
+	return filepath.Join(Dir(), "localname.pid")
+}
+
 func ValidateDomain(name string, port int) error {
 	if name == "" {
 		return fmt.Errorf("domain name cannot be empty")

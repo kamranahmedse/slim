@@ -15,6 +15,7 @@ import (
 var uninstallCmd = &cobra.Command{
 	Use:   "uninstall",
 	Short: "Remove all localname data and configuration",
+	Args:  cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		fmt.Println("Uninstalling localname...")
 
@@ -33,8 +34,11 @@ var uninstallCmd = &cobra.Command{
 
 		fmt.Print("  Removing port forwarding rules... ")
 		pf := portfwd.New()
-		pf.Disable()
-		fmt.Println("done")
+		if err := pf.Disable(); err != nil {
+			fmt.Printf("skipped (%v)\n", err)
+		} else {
+			fmt.Println("done")
+		}
 
 		fmt.Print("  Cleaning /etc/hosts... ")
 		if err := hostfile.RemoveAll(); err != nil {

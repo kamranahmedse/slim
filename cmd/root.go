@@ -25,8 +25,10 @@ mDNS for LAN access, and WebSocket passthrough for HMR.
 var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Print the version",
-	Run: func(cmd *cobra.Command, args []string) {
+	Args:  cobra.NoArgs,
+	RunE: func(cmd *cobra.Command, args []string) error {
 		fmt.Printf("localname %s\n", Version)
+		return nil
 	},
 }
 
