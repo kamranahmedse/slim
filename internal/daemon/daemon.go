@@ -102,18 +102,26 @@ func run() error {
 		return fmt.Errorf("writing pid file: %w", err)
 	}
 
+	var cleanupOnce sync.Once
+	cleanup := func() {
+		cleanupOnce.Do(func() {
+			responder.shutdown()
+			ipc.Close()
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			_ = srv.Shutdown(ctx)
+			_ = os.Remove(config.PidPath())
+		})
+	}
+	defer cleanup()
+
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+	defer signal.Stop(sigCh)
 
 	go func() {
 		<-sigCh
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-
-		responder.shutdown()
-		ipc.Close()
-		srv.Shutdown(ctx)
-		os.Remove(config.PidPath())
+		cleanup()
 	}()
 
 	return srv.Start()

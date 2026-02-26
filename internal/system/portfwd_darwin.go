@@ -67,7 +67,10 @@ func (d *darwinPortFwd) Enable() error {
 	}
 
 	if output, err := exec.Command("sudo", "pfctl", "-e").CombinedOutput(); err != nil {
-		return fmt.Errorf("enabling pfctl: %s: %w", strings.TrimSpace(string(output)), err)
+		out := strings.TrimSpace(string(output))
+		if !isPFAlreadyEnabledOutput(out) {
+			return fmt.Errorf("enabling pfctl: %s: %w", out, err)
+		}
 	}
 
 	cmd := exec.Command("sudo", "pfctl", "-f", "/etc/pf.conf")
@@ -111,4 +114,8 @@ func (d *darwinPortFwd) Disable() error {
 func (d *darwinPortFwd) IsEnabled() bool {
 	_, err := os.Stat(anchorFile)
 	return err == nil
+}
+
+func isPFAlreadyEnabledOutput(out string) bool {
+	return strings.Contains(strings.ToLower(out), "pf already enabled")
 }

@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"net"
 	"strings"
 	"time"
 
@@ -68,6 +69,9 @@ Runs first-time setup automatically if needed.
 		}
 
 		if !daemon.IsRunning() {
+			if err := ensureProxyPortsAvailable(); err != nil {
+				return err
+			}
 			if err := daemon.RunDetached(); err != nil {
 				return fmt.Errorf("starting daemon: %w", err)
 			}
@@ -128,6 +132,24 @@ func ensureSetup() error {
 		}
 	}
 
+	return nil
+}
+
+func ensureProxyPortsAvailable() error {
+	return ensurePortsAvailable([]string{
+		fmt.Sprintf(":%d", config.ProxyHTTPPort),
+		fmt.Sprintf(":%d", config.ProxyHTTPSPort),
+	})
+}
+
+func ensurePortsAvailable(addrs []string) error {
+	for _, addr := range addrs {
+		ln, err := net.Listen("tcp", addr)
+		if err != nil {
+			return fmt.Errorf("proxy listener port %s is unavailable: %w (another local proxy/old daemon may already be running)", addr, err)
+		}
+		_ = ln.Close()
+	}
 	return nil
 }
 
