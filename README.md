@@ -93,10 +93,6 @@ slim start myapp --port 3000 --log-mode minimal
 slim start myapp --port 3000 --log-mode off
 ```
 
-## Requirements
-
-First-time setup requires `sudo` for CA trust, port forwarding, and `/etc/hosts` management. macOS and Linux supported.
-
 ## License
 
-***REMOVED***
+PolyForm Shield 1.0.0 © [Kamran Ahmed](https://x.com/kamrify)
