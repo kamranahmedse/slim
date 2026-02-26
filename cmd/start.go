@@ -6,8 +6,7 @@ import (
 	"github.com/kamranahmedse/localname/internal/cert"
 	"github.com/kamranahmedse/localname/internal/config"
 	"github.com/kamranahmedse/localname/internal/daemon"
-	"github.com/kamranahmedse/localname/internal/hostfile"
-	"github.com/kamranahmedse/localname/internal/portfwd"
+	"github.com/kamranahmedse/localname/internal/system"
 	"github.com/spf13/cobra"
 )
 
@@ -33,16 +32,17 @@ Runs first-time setup automatically if needed.
 			return err
 		}
 
-		cfg, err := config.Load()
-		if err != nil {
+		if err := config.WithLock(func() error {
+			cfg, err := config.Load()
+			if err != nil {
+				return err
+			}
+			return cfg.SetDomain(name, startPort)
+		}); err != nil {
 			return err
 		}
 
-		if err := cfg.SetDomain(name, startPort); err != nil {
-			return err
-		}
-
-		if err := hostfile.Add(name); err != nil {
+		if err := system.AddHost(name); err != nil {
 			return fmt.Errorf("updating /etc/hosts: %w", err)
 		}
 
@@ -58,7 +58,9 @@ Runs first-time setup automatically if needed.
 				return err
 			}
 		} else {
-			daemon.SendIPC(daemon.Request{Type: daemon.MsgReload})
+			if _, err := daemon.SendIPC(daemon.Request{Type: daemon.MsgReload}); err != nil {
+				return fmt.Errorf("reloading daemon: %w", err)
+			}
 		}
 
 		fmt.Printf("https://%s.local → localhost:%d\n", name, startPort)
@@ -80,9 +82,9 @@ func ensureSetup() error {
 		}
 	}
 
-	pf := portfwd.New()
+	pf := system.NewPortForwarder()
 	if !pf.IsEnabled() {
-		fmt.Print("Setting up port forwarding (80→10080, 443→10443)... ")
+		fmt.Printf("Setting up port forwarding (80→%d, 443→%d)... ", config.ProxyHTTPPort, config.ProxyHTTPSPort)
 		if err := pf.Enable(); err != nil {
 			fmt.Printf("skipped (%v)\n", err)
 		} else {

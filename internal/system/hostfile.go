@@ -1,17 +1,15 @@
-package hostfile
+package system
 
 import (
 	"fmt"
 	"os"
 	"strings"
-
-	"github.com/kamranahmedse/localname/internal/osutil"
 )
 
 const hostsPath = "/etc/hosts"
 const marker = "# localname"
 
-func Add(name string) error {
+func AddHost(name string) error {
 	hostname := name + ".local"
 	entry := fmt.Sprintf("127.0.0.1 %s %s", hostname, marker)
 
@@ -20,15 +18,15 @@ func Add(name string) error {
 		return fmt.Errorf("reading hosts file: %w", err)
 	}
 
-	if strings.Contains(string(content), hostname) {
+	if hasMarkedEntry(string(content), hostname) {
 		return nil
 	}
 
 	updated := strings.TrimRight(string(content), "\n") + "\n" + entry + "\n"
-	return osutil.WriteFileElevated(hostsPath, updated)
+	return writeFileElevated(hostsPath, updated)
 }
 
-func Remove(name string) error {
+func RemoveHost(name string) error {
 	hostname := name + ".local"
 
 	content, err := os.ReadFile(hostsPath)
@@ -39,16 +37,16 @@ func Remove(name string) error {
 	lines := strings.Split(string(content), "\n")
 	var filtered []string
 	for _, line := range lines {
-		if strings.Contains(line, hostname) && strings.Contains(line, marker) {
+		if lineHasHost(line, hostname) && strings.Contains(line, marker) {
 			continue
 		}
 		filtered = append(filtered, line)
 	}
 
-	return osutil.WriteFileElevated(hostsPath, strings.Join(filtered, "\n"))
+	return writeFileElevated(hostsPath, strings.Join(filtered, "\n"))
 }
 
-func RemoveAll() error {
+func RemoveAllHosts() error {
 	content, err := os.ReadFile(hostsPath)
 	if err != nil {
 		return fmt.Errorf("reading hosts file: %w", err)
@@ -63,5 +61,23 @@ func RemoveAll() error {
 		filtered = append(filtered, line)
 	}
 
-	return osutil.WriteFileElevated(hostsPath, strings.Join(filtered, "\n"))
+	return writeFileElevated(hostsPath, strings.Join(filtered, "\n"))
+}
+
+func hasMarkedEntry(content, hostname string) bool {
+	for _, line := range strings.Split(content, "\n") {
+		if lineHasHost(line, hostname) && strings.Contains(line, marker) {
+			return true
+		}
+	}
+	return false
+}
+
+func lineHasHost(line, hostname string) bool {
+	for _, field := range strings.Fields(line) {
+		if field == hostname {
+			return true
+		}
+	}
+	return false
 }

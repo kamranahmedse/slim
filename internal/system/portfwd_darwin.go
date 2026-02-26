@@ -1,6 +1,6 @@
 //go:build darwin
 
-package portfwd
+package system
 
 import (
 	"fmt"
@@ -8,24 +8,23 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/kamranahmedse/localname/internal/osutil"
+	"github.com/kamranahmedse/localname/internal/config"
 )
 
 const anchorName = "com.localname"
 const anchorFile = "/etc/pf.anchors/com.localname"
 
-const pfRules = `rdr pass on lo0 inet proto tcp from any to 127.0.0.1 port 80 -> 127.0.0.1 port 10080
-rdr pass on lo0 inet proto tcp from any to 127.0.0.1 port 443 -> 127.0.0.1 port 10443
-`
+var pfRules = fmt.Sprintf("rdr pass on lo0 inet proto tcp from any to 127.0.0.1 port 80 -> 127.0.0.1 port %d\nrdr pass on lo0 inet proto tcp from any to 127.0.0.1 port 443 -> 127.0.0.1 port %d\n",
+	config.ProxyHTTPPort, config.ProxyHTTPSPort)
 
-type DarwinPortFwd struct{}
+type darwinPortFwd struct{}
 
-func New() PortForwarder {
-	return &DarwinPortFwd{}
+func NewPortForwarder() PortForwarder {
+	return &darwinPortFwd{}
 }
 
-func (d *DarwinPortFwd) Enable() error {
-	if err := osutil.WriteFileElevated(anchorFile, pfRules); err != nil {
+func (d *darwinPortFwd) Enable() error {
+	if err := writeFileElevated(anchorFile, pfRules); err != nil {
 		return fmt.Errorf("writing pf anchor: %w", err)
 	}
 
@@ -62,12 +61,14 @@ func (d *DarwinPortFwd) Enable() error {
 	}
 
 	if needsUpdate {
-		if err := osutil.WriteFileElevated("/etc/pf.conf", conf); err != nil {
+		if err := writeFileElevated("/etc/pf.conf", conf); err != nil {
 			return fmt.Errorf("writing pf.conf: %w", err)
 		}
 	}
 
-	exec.Command("sudo", "pfctl", "-e").Run()
+	if output, err := exec.Command("sudo", "pfctl", "-e").CombinedOutput(); err != nil {
+		return fmt.Errorf("enabling pfctl: %s: %w", strings.TrimSpace(string(output)), err)
+	}
 
 	cmd := exec.Command("sudo", "pfctl", "-f", "/etc/pf.conf")
 	output, err := cmd.CombinedOutput()
@@ -78,8 +79,10 @@ func (d *DarwinPortFwd) Enable() error {
 	return nil
 }
 
-func (d *DarwinPortFwd) Disable() error {
-	exec.Command("sudo", "rm", "-f", anchorFile).Run()
+func (d *darwinPortFwd) Disable() error {
+	if output, err := exec.Command("sudo", "rm", "-f", anchorFile).CombinedOutput(); err != nil {
+		return fmt.Errorf("removing pf anchor: %s: %w", strings.TrimSpace(string(output)), err)
+	}
 
 	pfConf, err := os.ReadFile("/etc/pf.conf")
 	if err != nil {
@@ -93,7 +96,7 @@ func (d *DarwinPortFwd) Disable() error {
 	conf = strings.ReplaceAll(conf, anchorLoad+"\n", "")
 	conf = strings.ReplaceAll(conf, anchorRule+"\n", "")
 
-	if err := osutil.WriteFileElevated("/etc/pf.conf", conf); err != nil {
+	if err := writeFileElevated("/etc/pf.conf", conf); err != nil {
 		return fmt.Errorf("writing pf.conf: %w", err)
 	}
 
@@ -105,7 +108,7 @@ func (d *DarwinPortFwd) Disable() error {
 	return nil
 }
 
-func (d *DarwinPortFwd) IsEnabled() bool {
+func (d *darwinPortFwd) IsEnabled() bool {
 	_, err := os.Stat(anchorFile)
 	return err == nil
 }

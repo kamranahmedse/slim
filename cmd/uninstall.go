@@ -7,8 +7,7 @@ import (
 	"github.com/kamranahmedse/localname/internal/cert"
 	"github.com/kamranahmedse/localname/internal/config"
 	"github.com/kamranahmedse/localname/internal/daemon"
-	"github.com/kamranahmedse/localname/internal/hostfile"
-	"github.com/kamranahmedse/localname/internal/portfwd"
+	"github.com/kamranahmedse/localname/internal/system"
 	"github.com/spf13/cobra"
 )
 
@@ -21,8 +20,11 @@ var uninstallCmd = &cobra.Command{
 
 		if daemon.IsRunning() {
 			fmt.Print("  Stopping daemon... ")
-			daemon.SendIPC(daemon.Request{Type: daemon.MsgShutdown})
-			fmt.Println("done")
+			if _, err := daemon.SendIPC(daemon.Request{Type: daemon.MsgShutdown}); err != nil {
+				fmt.Printf("skipped (%v)\n", err)
+			} else {
+				fmt.Println("done")
+			}
 		}
 
 		fmt.Print("  Removing CA from trust store... ")
@@ -33,7 +35,7 @@ var uninstallCmd = &cobra.Command{
 		}
 
 		fmt.Print("  Removing port forwarding rules... ")
-		pf := portfwd.New()
+		pf := system.NewPortForwarder()
 		if err := pf.Disable(); err != nil {
 			fmt.Printf("skipped (%v)\n", err)
 		} else {
@@ -41,7 +43,7 @@ var uninstallCmd = &cobra.Command{
 		}
 
 		fmt.Print("  Cleaning /etc/hosts... ")
-		if err := hostfile.RemoveAll(); err != nil {
+		if err := system.RemoveAllHosts(); err != nil {
 			fmt.Printf("skipped (%v)\n", err)
 		} else {
 			fmt.Println("done")

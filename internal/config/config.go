@@ -5,11 +5,17 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"syscall"
 
 	"gopkg.in/yaml.v3"
 )
 
 var validName = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]*[a-z0-9])?$`)
+
+const (
+	ProxyHTTPPort  = 10080
+	ProxyHTTPSPort = 10443
+)
 
 type Domain struct {
 	Name string `yaml:"name"`
@@ -20,9 +26,19 @@ type Config struct {
 	Domains []Domain `yaml:"domains"`
 }
 
+var baseDir string
+
+func Init() error {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return fmt.Errorf("cannot determine home directory: %w", err)
+	}
+	baseDir = filepath.Join(home, ".localname")
+	return nil
+}
+
 func Dir() string {
-	home, _ := os.UserHomeDir()
-	return filepath.Join(home, ".localname")
+	return baseDir
 }
 
 func Path() string {
@@ -44,6 +60,9 @@ func PidPath() string {
 func ValidateDomain(name string, port int) error {
 	if name == "" {
 		return fmt.Errorf("domain name cannot be empty")
+	}
+	if len(name) > 63 {
+		return fmt.Errorf("domain name %q is too long: must be 63 characters or fewer", name)
 	}
 	if !validName.MatchString(name) {
 		return fmt.Errorf("invalid domain name %q: must be lowercase alphanumeric with hyphens", name)
@@ -92,21 +111,7 @@ func (c *Config) FindDomain(name string) (*Domain, int) {
 	return nil, -1
 }
 
-func (c *Config) AddDomain(name string, port int) error {
-	if err := ValidateDomain(name, port); err != nil {
-		return err
-	}
-	if existing, _ := c.FindDomain(name); existing != nil {
-		return fmt.Errorf("domain %s.local already exists (port %d)", name, existing.Port)
-	}
-	c.Domains = append(c.Domains, Domain{Name: name, Port: port})
-	return c.Save()
-}
-
 func (c *Config) SetDomain(name string, port int) error {
-	if err := ValidateDomain(name, port); err != nil {
-		return err
-	}
 	if existing, idx := c.FindDomain(name); existing != nil {
 		c.Domains[idx].Port = port
 		return c.Save()
@@ -122,4 +127,24 @@ func (c *Config) RemoveDomain(name string) error {
 	}
 	c.Domains = append(c.Domains[:idx], c.Domains[idx+1:]...)
 	return c.Save()
+}
+
+func WithLock(fn func() error) error {
+	if err := os.MkdirAll(Dir(), 0755); err != nil {
+		return fmt.Errorf("creating config dir: %w", err)
+	}
+
+	lockPath := filepath.Join(Dir(), "config.lock")
+	f, err := os.OpenFile(lockPath, os.O_CREATE|os.O_RDONLY, 0644)
+	if err != nil {
+		return fmt.Errorf("opening lock file: %w", err)
+	}
+	defer f.Close()
+
+	if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX); err != nil {
+		return fmt.Errorf("acquiring config lock: %w", err)
+	}
+	defer syscall.Flock(int(f.Fd()), syscall.LOCK_UN)
+
+	return fn()
 }

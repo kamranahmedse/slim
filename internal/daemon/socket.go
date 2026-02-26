@@ -6,17 +6,10 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/kamranahmedse/localname/internal/config"
 )
-
-func SocketPath() string {
-	return config.SocketPath()
-}
-
-func PidPath() string {
-	return config.PidPath()
-}
 
 type IPCServer struct {
 	listener net.Listener
@@ -24,7 +17,7 @@ type IPCServer struct {
 }
 
 func NewIPCServer(handler func(Request) Response) (*IPCServer, error) {
-	sockPath := SocketPath()
+	sockPath := config.SocketPath()
 
 	os.Remove(sockPath)
 	if err := os.MkdirAll(filepath.Dir(sockPath), 0755); err != nil {
@@ -51,6 +44,7 @@ func (s *IPCServer) Serve() {
 
 func (s *IPCServer) handleConn(conn net.Conn) {
 	defer conn.Close()
+	conn.SetDeadline(time.Now().Add(30 * time.Second))
 
 	var req Request
 	if err := json.NewDecoder(conn).Decode(&req); err != nil {
@@ -65,15 +59,17 @@ func (s *IPCServer) handleConn(conn net.Conn) {
 
 func (s *IPCServer) Close() {
 	s.listener.Close()
-	os.Remove(SocketPath())
+	os.Remove(config.SocketPath())
 }
 
 func SendIPC(req Request) (*Response, error) {
-	conn, err := net.Dial("unix", SocketPath())
+	conn, err := net.DialTimeout("unix", config.SocketPath(), 5*time.Second)
 	if err != nil {
 		return nil, fmt.Errorf("connecting to daemon: %w (is localname running?)", err)
 	}
 	defer conn.Close()
+
+	conn.SetDeadline(time.Now().Add(30 * time.Second))
 
 	if err := json.NewEncoder(conn).Encode(req); err != nil {
 		return nil, fmt.Errorf("sending request: %w", err)

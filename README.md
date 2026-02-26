@@ -23,6 +23,8 @@ make build
 make install
 ```
 
+Requires Go 1.25 or later to build from source.
+
 ## Quick Start
 
 ```bash
@@ -44,6 +46,7 @@ localname logs                       # tail request logs
 localname logs -f myapp              # follow logs for one domain
 localname stop myapp                 # stop one domain
 localname stop                       # stop everything
+localname version                    # print version
 ```
 
 ### Uninstall
@@ -65,10 +68,25 @@ localname uninstall   # removes everything: CA, certs, hosts entries, pfctl rule
 
 Config lives at `~/.localname/config.yaml`. Certificates in `~/.localname/certs/`, root CA in `~/.localname/ca/`, logs in `~/.localname/access.log`.
 
+## Requirements
+
+First-time setup requires `sudo` for:
+- Trusting the root CA in the system keychain (macOS)
+- Setting up port forwarding rules (macOS: pfctl)
+- Managing `/etc/hosts` entries
+
+After trusting the CA, you may need to restart your browser for it to recognize the new root certificate.
+
 ## Platform Support
 
-- **macOS**: Full support
-- **Linux**: Planned
+- **macOS**: Full support (port forwarding via pfctl, CA trust via Keychain)
+- **Linux**: Partial — hosts file management works, but CA trust and port forwarding are not yet implemented. Without CA trust, browsers will show certificate warnings on every page load. Note that `systemd-resolved` and `avahi-daemon` often claim the `.local` TLD, which may require additional configuration.
+
+## Notes on `.local` TLD
+
+The `.local` TLD is reserved for mDNS (RFC 6762). localname uses this intentionally for LAN discovery, but be aware:
+- Some corporate networks and VPNs intercept `.local` resolution, which may conflict.
+- Existing Bonjour/Avahi services on the network may advertise the same hostnames.
 
 ## License
 

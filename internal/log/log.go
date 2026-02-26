@@ -17,6 +17,8 @@ const (
 	Magenta = "\033[35m"
 )
 
+const maxLogSize = 10 << 20 // 10 MB
+
 var (
 	logFile *os.File
 	mu      sync.Mutex
@@ -25,6 +27,10 @@ var (
 func SetOutput(path string) error {
 	mu.Lock()
 	defer mu.Unlock()
+
+	if info, err := os.Stat(path); err == nil && info.Size() > maxLogSize {
+		os.Truncate(path, 0)
+	}
 
 	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {

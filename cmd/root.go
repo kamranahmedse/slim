@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/kamranahmedse/localname/internal/config"
 	"github.com/spf13/cobra"
 )
 
@@ -33,6 +34,9 @@ var versionCmd = &cobra.Command{
 }
 
 func Execute() error {
+	if err := config.Init(); err != nil {
+		return err
+	}
 	rootCmd.CompletionOptions.DisableDefaultCmd = true
 	return rootCmd.Execute()
 }

@@ -1,18 +1,21 @@
 package proxy
 
 import (
+	"bufio"
 	"fmt"
+	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"strings"
 	"time"
 
-	"github.com/kamranahmedse/localname/internal/config"
 	"github.com/kamranahmedse/localname/internal/log"
 )
 
-func buildHandler(cfg *config.Config) http.Handler {
+func buildHandler(s *Server) http.Handler {
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		host := r.Host
 		if idx := strings.IndexByte(host, ':'); idx != -1 {
@@ -20,7 +23,13 @@ func buildHandler(cfg *config.Config) http.Handler {
 		}
 
 		name := strings.TrimSuffix(host, ".local")
-		domain, _ := cfg.FindDomain(name)
+		s.cfgMu.RLock()
+		domain, _ := s.cfg.FindDomain(name)
+		var port int
+		if domain != nil {
+			port = domain.Port
+		}
+		s.cfgMu.RUnlock()
 		if domain == nil {
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
 			w.WriteHeader(http.StatusNotFound)
@@ -30,27 +39,28 @@ func buildHandler(cfg *config.Config) http.Handler {
 
 		target := &url.URL{
 			Scheme: "http",
-			Host:   fmt.Sprintf("localhost:%d", domain.Port),
+			Host:   fmt.Sprintf("localhost:%d", port),
 		}
 
-		proxy := &httputil.ReverseProxy{
-			Director: func(req *http.Request) {
-				req.URL.Scheme = target.Scheme
-				req.URL.Host = target.Host
-				req.Host = r.Host
+		rp := &httputil.ReverseProxy{
+			Transport: transport,
+			Rewrite: func(pr *httputil.ProxyRequest) {
+				pr.SetURL(target)
+				pr.Out.Host = pr.In.Host
 			},
+			FlushInterval: -1,
 			ErrorHandler: func(w http.ResponseWriter, r *http.Request, err error) {
 				w.Header().Set("Content-Type", "text/html; charset=utf-8")
 				w.WriteHeader(http.StatusBadGateway)
-				fmt.Fprintf(w, upstreamDownPage, host, domain.Port, domain.Port)
+				fmt.Fprintf(w, upstreamDownPage, host, port, port)
 			},
 		}
 
 		start := time.Now()
 		recorder := &statusRecorder{ResponseWriter: w, status: 200}
-		proxy.ServeHTTP(recorder, r)
+		rp.ServeHTTP(recorder, r)
 
-		log.Request(host, r.Method, r.URL.Path, domain.Port, recorder.status, time.Since(start))
+		log.Request(host, r.Method, r.URL.Path, port, recorder.status, time.Since(start))
 	})
 }
 
@@ -72,6 +82,13 @@ func (r *statusRecorder) Flush() {
 	if f, ok := r.ResponseWriter.(http.Flusher); ok {
 		f.Flush()
 	}
+}
+
+func (r *statusRecorder) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	if h, ok := r.ResponseWriter.(http.Hijacker); ok {
+		return h.Hijack()
+	}
+	return nil, nil, fmt.Errorf("upstream ResponseWriter does not support hijacking")
 }
 
 const notFoundPage = `<!DOCTYPE html>

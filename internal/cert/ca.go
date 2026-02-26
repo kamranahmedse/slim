@@ -72,14 +72,18 @@ func GenerateCA() error {
 		return err
 	}
 	defer certFile.Close()
-	pem.Encode(certFile, &pem.Block{Type: "CERTIFICATE", Bytes: certDER})
+	if err := pem.Encode(certFile, &pem.Block{Type: "CERTIFICATE", Bytes: certDER}); err != nil {
+		return fmt.Errorf("writing CA cert: %w", err)
+	}
 
 	keyFile, err := os.OpenFile(CAKeyPath(), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
 		return err
 	}
 	defer keyFile.Close()
-	pem.Encode(keyFile, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(key)})
+	if err := pem.Encode(keyFile, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(key)}); err != nil {
+		return fmt.Errorf("writing CA key: %w", err)
+	}
 
 	return nil
 }

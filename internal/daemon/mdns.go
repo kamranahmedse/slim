@@ -1,7 +1,6 @@
-package mdns
+package daemon
 
 import (
-	"context"
 	"net"
 	"sync"
 
@@ -9,16 +8,16 @@ import (
 	"github.com/kamranahmedse/localname/internal/log"
 )
 
-type Responder struct {
+type mdnsResponder struct {
 	servers []*zeroconf.Server
 	mu      sync.Mutex
 }
 
-func New() *Responder {
-	return &Responder{}
+func newMDNSResponder() *mdnsResponder {
+	return &mdnsResponder{}
 }
 
-func (r *Responder) Register(name string, port int) error {
+func (r *mdnsResponder) register(name string, port int) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -50,7 +49,7 @@ func (r *Responder) Register(name string, port int) error {
 	return nil
 }
 
-func (r *Responder) Shutdown(_ context.Context) {
+func (r *mdnsResponder) shutdown() {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 

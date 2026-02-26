@@ -12,15 +12,13 @@ import (
 
 	godaemon "github.com/sevlyar/go-daemon"
 
-	"github.com/kamranahmedse/localname/internal/cert"
 	"github.com/kamranahmedse/localname/internal/config"
 	"github.com/kamranahmedse/localname/internal/log"
-	"github.com/kamranahmedse/localname/internal/mdns"
 	"github.com/kamranahmedse/localname/internal/proxy"
 )
 
 func IsRunning() bool {
-	_, err := os.Stat(SocketPath())
+	_, err := os.Stat(config.SocketPath())
 	if err != nil {
 		return false
 	}
@@ -38,7 +36,7 @@ func RunDetached() error {
 	}
 
 	daemonCtx := &godaemon.Context{
-		PidFileName: PidPath(),
+		PidFileName: "",
 		PidFilePerm: 0644,
 		LogFileName: "",
 		WorkDir:     config.Dir(),
@@ -79,11 +77,13 @@ func run() error {
 		return err
 	}
 
-	srv := proxy.NewServer(cfg, proxy.HTTPPort, proxy.HTTPSPort)
+	srv := proxy.NewServer(cfg)
 
-	responder := mdns.New()
+	responder := newMDNSResponder()
 	for _, d := range cfg.Domains {
-		responder.Register(d.Name, d.Port)
+		if err := responder.register(d.Name, d.Port); err != nil {
+			log.Error("mDNS registration failed for %s: %v", d.Name, err)
+		}
 	}
 
 	ipc, err := NewIPCServer(func(req Request) Response {
@@ -94,29 +94,28 @@ func run() error {
 	}
 	go ipc.Serve()
 
-	if err := os.WriteFile(PidPath(), []byte(strconv.Itoa(os.Getpid())), 0644); err != nil {
+	if err := os.WriteFile(config.PidPath(), []byte(strconv.Itoa(os.Getpid())), 0644); err != nil {
 		return fmt.Errorf("writing pid file: %w", err)
 	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 
 	go func() {
 		<-sigCh
-		responder.Shutdown(ctx)
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		responder.shutdown()
 		ipc.Close()
-		cancel()
 		srv.Shutdown(ctx)
-		os.Remove(PidPath())
+		os.Remove(config.PidPath())
 	}()
 
 	return srv.Start()
 }
 
-func handleIPC(req Request, srv *proxy.Server, responder *mdns.Responder) Response {
+func handleIPC(req Request, srv *proxy.Server, responder *mdnsResponder) Response {
 	switch req.Type {
 	case MsgShutdown:
 		go func() {
@@ -130,12 +129,6 @@ func handleIPC(req Request, srv *proxy.Server, responder *mdns.Responder) Respon
 
 	case MsgReload:
 		return handleReload(srv, responder)
-
-	case MsgAddDomain:
-		return handleAddDomain(req, srv, responder)
-
-	case MsgRemoveDomain:
-		return handleRemoveDomain(req, srv)
 
 	default:
 		return Response{OK: false, Error: fmt.Sprintf("unknown message type: %s", req.Type)}
@@ -169,56 +162,17 @@ func handleStatus() Response {
 	return Response{OK: true, Data: data}
 }
 
-func handleReload(srv *proxy.Server, responder *mdns.Responder) Response {
-	if err := srv.ReloadConfig(); err != nil {
-		return Response{OK: false, Error: err.Error()}
-	}
-
-	cfg, err := config.Load()
+func handleReload(srv *proxy.Server, responder *mdnsResponder) Response {
+	cfg, err := srv.ReloadConfig()
 	if err != nil {
 		return Response{OK: false, Error: err.Error()}
 	}
-	responder.Shutdown(context.Background())
+
+	responder.shutdown()
 	for _, d := range cfg.Domains {
-		responder.Register(d.Name, d.Port)
+		if err := responder.register(d.Name, d.Port); err != nil {
+			log.Error("mDNS registration failed for %s: %v", d.Name, err)
+		}
 	}
-	return Response{OK: true}
-}
-
-func handleAddDomain(req Request, srv *proxy.Server, responder *mdns.Responder) Response {
-	var dd DomainData
-	if err := json.Unmarshal(req.Data, &dd); err != nil {
-		return Response{OK: false, Error: fmt.Sprintf("invalid request data: %v", err)}
-	}
-
-	cfg, err := config.Load()
-	if err != nil {
-		return Response{OK: false, Error: err.Error()}
-	}
-	if err := cfg.AddDomain(dd.Name, dd.Port); err != nil {
-		return Response{OK: false, Error: err.Error()}
-	}
-	if err := cert.EnsureLeafCert(dd.Name); err != nil {
-		return Response{OK: false, Error: err.Error()}
-	}
-	srv.ReloadConfig()
-	responder.Register(dd.Name, dd.Port)
-	return Response{OK: true}
-}
-
-func handleRemoveDomain(req Request, srv *proxy.Server) Response {
-	var dd DomainData
-	if err := json.Unmarshal(req.Data, &dd); err != nil {
-		return Response{OK: false, Error: fmt.Sprintf("invalid request data: %v", err)}
-	}
-
-	cfg, err := config.Load()
-	if err != nil {
-		return Response{OK: false, Error: err.Error()}
-	}
-	if err := cfg.RemoveDomain(dd.Name); err != nil {
-		return Response{OK: false, Error: err.Error()}
-	}
-	srv.ReloadConfig()
 	return Response{OK: true}
 }

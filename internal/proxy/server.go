@@ -15,13 +15,14 @@ import (
 	"github.com/kamranahmedse/localname/internal/log"
 )
 
-const (
-	HTTPPort  = ":10080"
-	HTTPSPort = ":10443"
+var (
+	HTTPAddr  = fmt.Sprintf(":%d", config.ProxyHTTPPort)
+	HTTPSAddr = fmt.Sprintf(":%d", config.ProxyHTTPSPort)
 )
 
 type Server struct {
 	cfg        *config.Config
+	cfgMu      sync.RWMutex
 	httpAddr   string
 	httpsAddr  string
 	httpServer *http.Server
@@ -30,11 +31,11 @@ type Server struct {
 	certMu     sync.RWMutex
 }
 
-func NewServer(cfg *config.Config, httpAddr, httpsAddr string) *Server {
+func NewServer(cfg *config.Config) *Server {
 	return &Server{
 		cfg:       cfg,
-		httpAddr:  httpAddr,
-		httpsAddr: httpsAddr,
+		httpAddr:  HTTPAddr,
+		httpsAddr: HTTPSAddr,
 		certCache: make(map[string]*tls.Certificate),
 	}
 }
@@ -66,7 +67,7 @@ func (s *Server) getCertificate(hello *tls.ClientHelloInfo) (*tls.Certificate, e
 }
 
 func (s *Server) Start() error {
-	handler := buildHandler(s.cfg)
+	handler := buildHandler(s)
 
 	for _, d := range s.cfg.Domains {
 		if err := cert.EnsureLeafCert(d.Name); err != nil {
@@ -75,10 +76,11 @@ func (s *Server) Start() error {
 	}
 
 	s.httpServer = &http.Server{
-		Addr:         s.httpAddr,
-		ReadTimeout:  5 * time.Second,
-		WriteTimeout: 10 * time.Second,
-		IdleTimeout:  120 * time.Second,
+		Addr:              s.httpAddr,
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       5 * time.Second,
+		WriteTimeout:      10 * time.Second,
+		IdleTimeout:       120 * time.Second,
 		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			target := "https://" + r.Host + r.URL.RequestURI()
 			http.Redirect(w, r, target, http.StatusMovedPermanently)
@@ -86,11 +88,10 @@ func (s *Server) Start() error {
 	}
 
 	s.tlsServer = &http.Server{
-		Addr:         s.httpsAddr,
-		ReadTimeout:  30 * time.Second,
-		WriteTimeout: 60 * time.Second,
-		IdleTimeout:  120 * time.Second,
-		Handler:      handler,
+		Addr:              s.httpsAddr,
+		ReadHeaderTimeout: 5 * time.Second,
+		IdleTimeout:       120 * time.Second,
+		Handler:           handler,
 		TLSConfig: &tls.Config{
 			GetCertificate: s.getCertificate,
 		},
@@ -120,11 +121,13 @@ func (s *Server) Start() error {
 	go func() { errCh <- s.httpServer.Serve(httpLn) }()
 	go func() { errCh <- s.tlsServer.Serve(tlsLn) }()
 
-	err = <-errCh
-	if err == http.ErrServerClosed {
-		return nil
+	var retErr error
+	for i := 0; i < 2; i++ {
+		if err := <-errCh; err != nil && err != http.ErrServerClosed && retErr == nil {
+			retErr = err
+		}
 	}
-	return err
+	return retErr
 }
 
 func (s *Server) Shutdown(ctx context.Context) error {
@@ -144,23 +147,25 @@ func (s *Server) Shutdown(ctx context.Context) error {
 	return firstErr
 }
 
-func (s *Server) ReloadConfig() error {
+func (s *Server) ReloadConfig() (*config.Config, error) {
 	cfg, err := config.Load()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	for _, d := range cfg.Domains {
 		if err := cert.EnsureLeafCert(d.Name); err != nil {
-			return err
+			return nil, err
 		}
 	}
 
+	s.cfgMu.Lock()
 	s.cfg = cfg
+	s.cfgMu.Unlock()
 
 	s.certMu.Lock()
 	s.certCache = make(map[string]*tls.Certificate)
 	s.certMu.Unlock()
 
-	return nil
+	return cfg, nil
 }

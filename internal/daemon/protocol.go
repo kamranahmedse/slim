@@ -5,11 +5,9 @@ import "encoding/json"
 type MessageType string
 
 const (
-	MsgShutdown    MessageType = "shutdown"
-	MsgStatus      MessageType = "status"
-	MsgReload      MessageType = "reload"
-	MsgAddDomain   MessageType = "add_domain"
-	MsgRemoveDomain MessageType = "remove_domain"
+	MsgShutdown MessageType = "shutdown"
+	MsgStatus   MessageType = "status"
+	MsgReload   MessageType = "reload"
 )
 
 type Request struct {
@@ -35,7 +33,3 @@ type DomainInfo struct {
 	Healthy bool   `json:"healthy"`
 }
 
-type DomainData struct {
-	Name string `json:"name"`
-	Port int    `json:"port,omitempty"`
-}

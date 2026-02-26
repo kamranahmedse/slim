@@ -79,14 +79,18 @@ func GenerateLeafCert(name string) error {
 		return err
 	}
 	defer certFile.Close()
-	pem.Encode(certFile, &pem.Block{Type: "CERTIFICATE", Bytes: certDER})
+	if err := pem.Encode(certFile, &pem.Block{Type: "CERTIFICATE", Bytes: certDER}); err != nil {
+		return fmt.Errorf("writing leaf cert: %w", err)
+	}
 
 	keyFile, err := os.OpenFile(LeafKeyPath(name), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
 		return err
 	}
 	defer keyFile.Close()
-	pem.Encode(keyFile, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(key)})
+	if err := pem.Encode(keyFile, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(key)}); err != nil {
+		return fmt.Errorf("writing leaf key: %w", err)
+	}
 
 	return nil
 }
@@ -100,8 +104,27 @@ func LoadLeafTLS(name string) (*tls.Certificate, error) {
 }
 
 func EnsureLeafCert(name string) error {
-	if LeafExists(name) {
+	if LeafExists(name) && !leafExpiringSoon(name) {
 		return nil
 	}
 	return GenerateLeafCert(name)
+}
+
+func leafExpiringSoon(name string) bool {
+	data, err := os.ReadFile(LeafCertPath(name))
+	if err != nil {
+		return true
+	}
+
+	block, _ := pem.Decode(data)
+	if block == nil {
+		return true
+	}
+
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return true
+	}
+
+	return time.Until(cert.NotAfter) < 30*24*time.Hour
 }

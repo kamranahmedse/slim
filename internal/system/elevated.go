@@ -1,4 +1,4 @@
-package osutil
+package system
 
 import (
 	"os"
@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-func WriteFileElevated(path string, content string) error {
+func writeFileElevated(path string, content string) error {
 	err := os.WriteFile(path, []byte(content), 0644)
 	if err == nil {
 		return nil

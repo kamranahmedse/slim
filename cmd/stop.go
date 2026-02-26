@@ -5,7 +5,7 @@ import (
 
 	"github.com/kamranahmedse/localname/internal/config"
 	"github.com/kamranahmedse/localname/internal/daemon"
-	"github.com/kamranahmedse/localname/internal/hostfile"
+	"github.com/kamranahmedse/localname/internal/system"
 	"github.com/spf13/cobra"
 )
 
@@ -26,26 +26,41 @@ var stopCmd = &cobra.Command{
 }
 
 func stopOne(name string) error {
-	cfg, err := config.Load()
-	if err != nil {
+	var remainingDomains int
+
+	if err := config.WithLock(func() error {
+		cfg, err := config.Load()
+		if err != nil {
+			return err
+		}
+
+		if _, idx := cfg.FindDomain(name); idx == -1 {
+			return fmt.Errorf("%s.local is not running", name)
+		}
+
+		if err := cfg.RemoveDomain(name); err != nil {
+			return err
+		}
+		remainingDomains = len(cfg.Domains)
+		return nil
+	}); err != nil {
 		return err
 	}
 
-	if _, idx := cfg.FindDomain(name); idx == -1 {
-		return fmt.Errorf("%s.local is not running", name)
+	if err := system.RemoveHost(name); err != nil {
+		return fmt.Errorf("updating /etc/hosts: %w", err)
 	}
-
-	if err := cfg.RemoveDomain(name); err != nil {
-		return err
-	}
-	hostfile.Remove(name)
 
 	if daemon.IsRunning() {
-		if len(cfg.Domains) == 0 {
-			daemon.SendIPC(daemon.Request{Type: daemon.MsgShutdown})
+		if remainingDomains == 0 {
+			if _, err := daemon.SendIPC(daemon.Request{Type: daemon.MsgShutdown}); err != nil {
+				return fmt.Errorf("stopping daemon: %w", err)
+			}
 			fmt.Printf("Stopped %s.local (daemon shut down)\n", name)
 		} else {
-			daemon.SendIPC(daemon.Request{Type: daemon.MsgReload})
+			if _, err := daemon.SendIPC(daemon.Request{Type: daemon.MsgReload}); err != nil {
+				return fmt.Errorf("reloading daemon: %w", err)
+			}
 			fmt.Printf("Stopped %s.local\n", name)
 		}
 	} else {
@@ -56,27 +71,38 @@ func stopOne(name string) error {
 }
 
 func stopAll() error {
-	cfg, err := config.Load()
-	if err != nil {
+	var domains []config.Domain
+
+	if err := config.WithLock(func() error {
+		cfg, err := config.Load()
+		if err != nil {
+			return err
+		}
+		domains = cfg.Domains
+		if len(domains) > 0 {
+			cfg.Domains = nil
+			return cfg.Save()
+		}
+		return nil
+	}); err != nil {
 		return err
 	}
 
-	if len(cfg.Domains) == 0 && !daemon.IsRunning() {
+	if len(domains) == 0 && !daemon.IsRunning() {
 		fmt.Println("Nothing is running.")
 		return nil
 	}
 
-	for _, d := range cfg.Domains {
-		hostfile.Remove(d.Name)
-	}
-
-	cfg.Domains = nil
-	if err := cfg.Save(); err != nil {
-		return err
+	for _, d := range domains {
+		if err := system.RemoveHost(d.Name); err != nil {
+			fmt.Printf("Warning: failed to remove %s.local from /etc/hosts: %v\n", d.Name, err)
+		}
 	}
 
 	if daemon.IsRunning() {
-		daemon.SendIPC(daemon.Request{Type: daemon.MsgShutdown})
+		if _, err := daemon.SendIPC(daemon.Request{Type: daemon.MsgShutdown}); err != nil {
+			return fmt.Errorf("stopping daemon: %w", err)
+		}
 	}
 
 	fmt.Println("Stopped all domains.")

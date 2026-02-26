@@ -1,14 +1,16 @@
 package cert
 
 import (
+	"errors"
 	"fmt"
 	"os/exec"
 	"runtime"
+	"strings"
 )
 
 func TrustCA() error {
 	if runtime.GOOS != "darwin" {
-		return fmt.Errorf("CA trust is only supported on macOS currently")
+		return errors.New("trusting CA is only supported on macOS")
 	}
 
 	cmd := exec.Command("sudo", "security", "add-trusted-cert",
@@ -19,14 +21,14 @@ func TrustCA() error {
 	cmd.Stdin = nil
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("trusting CA: %s: %w", string(output), err)
+		return fmt.Errorf("trusting CA: %s: %w", strings.TrimSpace(string(output)), err)
 	}
 	return nil
 }
 
 func UntrustCA() error {
 	if runtime.GOOS != "darwin" {
-		return fmt.Errorf("CA untrust is only supported on macOS currently")
+		return errors.New("untrusting CA is only supported on macOS")
 	}
 
 	cmd := exec.Command("sudo", "security", "remove-trusted-cert",
@@ -34,7 +36,7 @@ func UntrustCA() error {
 	)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("untrusting CA: %s: %w", string(output), err)
+		return fmt.Errorf("untrusting CA: %s: %w", strings.TrimSpace(string(output)), err)
 	}
 	return nil
 }
