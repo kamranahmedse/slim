@@ -43,8 +43,7 @@ var logsCmd = &cobra.Command{
 		}
 
 		if logsFollow {
-			// Show last chunk then follow
-			seekToTail(f, 50)
+			f.Seek(0, io.SeekEnd)
 		}
 
 		reader := bufio.NewReader(f)
@@ -73,42 +72,7 @@ var logsCmd = &cobra.Command{
 	},
 }
 
-func seekToTail(f *os.File, lines int) {
-	info, err := f.Stat()
-	if err != nil || info.Size() == 0 {
-		return
-	}
-
-	// Read last 8KB to find recent lines
-	bufSize := int64(8192)
-	if bufSize > info.Size() {
-		bufSize = info.Size()
-	}
-
-	f.Seek(-bufSize, io.SeekEnd)
-
-	buf := make([]byte, bufSize)
-	n, _ := f.Read(buf)
-	buf = buf[:n]
-
-	// Find the offset of the Nth-to-last newline
-	count := 0
-	for i := len(buf) - 1; i >= 0; i-- {
-		if buf[i] == '\n' {
-			count++
-			if count > lines {
-				f.Seek(-bufSize+int64(i)+1, io.SeekEnd)
-				return
-			}
-		}
-	}
-
-	// Less than N lines in buffer, just show from start of buffer
-	f.Seek(-bufSize, io.SeekEnd)
-}
-
 func formatLogLine(line string) string {
-	// Format: timestamp\tdomain\tmethod\tpath\tupstream\tstatus\tduration
 	parts := strings.Split(line, "\t")
 	if len(parts) < 7 {
 		return line

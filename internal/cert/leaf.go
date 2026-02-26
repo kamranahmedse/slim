@@ -98,3 +98,10 @@ func LoadLeafTLS(name string) (*tls.Certificate, error) {
 	}
 	return &cert, nil
 }
+
+func EnsureLeafCert(name string) error {
+	if LeafExists(name) {
+		return nil
+	}
+	return GenerateLeafCert(name)
+}

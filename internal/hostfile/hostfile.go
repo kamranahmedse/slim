@@ -3,8 +3,9 @@ package hostfile
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"strings"
+
+	"github.com/kamrify/localname/internal/osutil"
 )
 
 const hostsPath = "/etc/hosts"
@@ -24,7 +25,7 @@ func Add(name string) error {
 	}
 
 	updated := strings.TrimRight(string(content), "\n") + "\n" + entry + "\n"
-	return writeHosts(updated)
+	return osutil.WriteFileElevated(hostsPath, updated)
 }
 
 func Remove(name string) error {
@@ -44,7 +45,7 @@ func Remove(name string) error {
 		filtered = append(filtered, line)
 	}
 
-	return writeHosts(strings.Join(filtered, "\n"))
+	return osutil.WriteFileElevated(hostsPath, strings.Join(filtered, "\n"))
 }
 
 func RemoveAll() error {
@@ -62,25 +63,5 @@ func RemoveAll() error {
 		filtered = append(filtered, line)
 	}
 
-	return writeHosts(strings.Join(filtered, "\n"))
-}
-
-func writeHosts(content string) error {
-	err := os.WriteFile(hostsPath, []byte(content), 0644)
-	if err == nil {
-		return nil
-	}
-
-	if !os.IsPermission(err) {
-		return fmt.Errorf("writing hosts file: %w", err)
-	}
-
-	cmd := exec.Command("sudo", "tee", hostsPath)
-	cmd.Stdin = strings.NewReader(content)
-	cmd.Stdout = nil
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("writing hosts file with sudo: %w", err)
-	}
-	return nil
+	return osutil.WriteFileElevated(hostsPath, strings.Join(filtered, "\n"))
 }

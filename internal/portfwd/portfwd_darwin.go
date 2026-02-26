@@ -7,6 +7,8 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+
+	"github.com/kamrify/localname/internal/osutil"
 )
 
 const anchorName = "com.localname"
@@ -23,7 +25,7 @@ func New() PortForwarder {
 }
 
 func (d *DarwinPortFwd) Enable() error {
-	if err := sudoWrite(anchorFile, pfRules); err != nil {
+	if err := osutil.WriteFileElevated(anchorFile, pfRules); err != nil {
 		return fmt.Errorf("writing pf anchor: %w", err)
 	}
 
@@ -60,13 +62,11 @@ func (d *DarwinPortFwd) Enable() error {
 	}
 
 	if needsUpdate {
-		if err := sudoWrite("/etc/pf.conf", conf); err != nil {
+		if err := osutil.WriteFileElevated("/etc/pf.conf", conf); err != nil {
 			return fmt.Errorf("writing pf.conf: %w", err)
 		}
 	}
 
-	// Enable pf if not already running, then load rules.
-	// -e exits 1 if already enabled, so ignore that error.
 	exec.Command("sudo", "pfctl", "-e").Run()
 
 	cmd := exec.Command("sudo", "pfctl", "-f", "/etc/pf.conf")
@@ -93,7 +93,7 @@ func (d *DarwinPortFwd) Disable() error {
 	conf = strings.ReplaceAll(conf, anchorLoad+"\n", "")
 	conf = strings.ReplaceAll(conf, anchorRule+"\n", "")
 
-	sudoWrite("/etc/pf.conf", conf)
+	osutil.WriteFileElevated("/etc/pf.conf", conf)
 	exec.Command("sudo", "pfctl", "-f", "/etc/pf.conf").Run()
 	return nil
 }
@@ -101,21 +101,4 @@ func (d *DarwinPortFwd) Disable() error {
 func (d *DarwinPortFwd) IsEnabled() bool {
 	_, err := os.Stat(anchorFile)
 	return err == nil
-}
-
-func sudoWrite(path string, content string) error {
-	err := os.WriteFile(path, []byte(content), 0644)
-	if err == nil {
-		return nil
-	}
-
-	if !os.IsPermission(err) {
-		return err
-	}
-
-	cmd := exec.Command("sudo", "tee", path)
-	cmd.Stdin = strings.NewReader(content)
-	cmd.Stdout = nil
-	cmd.Stderr = os.Stderr
-	return cmd.Run()
 }

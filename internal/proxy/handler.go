@@ -74,10 +74,6 @@ func (r *statusRecorder) Flush() {
 	}
 }
 
-func (r *statusRecorder) Hijack() (c interface{}, buf interface{}, err error) {
-	return nil, nil, fmt.Errorf("hijack not supported")
-}
-
 const notFoundPage = `<!DOCTYPE html>
 <html>
 <head><title>localname - Not Found</title>
@@ -93,7 +89,7 @@ const notFoundPage = `<!DOCTYPE html>
 <div class="container">
   <h1>%s</h1>
   <p>This domain isn't configured in localname.<br>
-  Run <code>localname add &lt;name&gt; --port &lt;port&gt;</code> to set it up.</p>
+  Run <code>localname start &lt;name&gt; --port &lt;port&gt;</code> to set it up.</p>
 </div>
 </body>
 </html>`

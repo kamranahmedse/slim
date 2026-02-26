@@ -25,6 +25,10 @@ Runs first-time setup automatically if needed.
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name := normalizeName(args[0])
 
+		if err := config.ValidateDomain(name, startPort); err != nil {
+			return err
+		}
+
 		if err := ensureSetup(); err != nil {
 			return err
 		}
@@ -38,12 +42,12 @@ Runs first-time setup automatically if needed.
 			return err
 		}
 
-		hostfile.Add(name)
+		if err := hostfile.Add(name); err != nil {
+			return fmt.Errorf("updating /etc/hosts: %w", err)
+		}
 
-		if !cert.LeafExists(name) {
-			if err := cert.GenerateLeafCert(name); err != nil {
-				return fmt.Errorf("generating certificate: %w", err)
-			}
+		if err := cert.EnsureLeafCert(name); err != nil {
+			return fmt.Errorf("generating certificate: %w", err)
 		}
 
 		if !daemon.IsRunning() {

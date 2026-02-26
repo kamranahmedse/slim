@@ -8,10 +8,16 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/kamrify/localname/internal/cert"
 	"github.com/kamrify/localname/internal/config"
 	"github.com/kamrify/localname/internal/log"
+)
+
+const (
+	HTTPPort  = ":10080"
+	HTTPSPort = ":10443"
 )
 
 type Server struct {
@@ -43,11 +49,8 @@ func (s *Server) getCertificate(hello *tls.ClientHelloInfo) (*tls.Certificate, e
 	}
 	s.certMu.RUnlock()
 
-	if !cert.LeafExists(name) {
-		log.Info("Generating certificate for %s.local", name)
-		if err := cert.GenerateLeafCert(name); err != nil {
-			return nil, fmt.Errorf("generating cert for %s: %w", name, err)
-		}
+	if err := cert.EnsureLeafCert(name); err != nil {
+		return nil, fmt.Errorf("ensuring cert for %s: %w", name, err)
 	}
 
 	tlsCert, err := cert.LoadLeafTLS(name)
@@ -65,29 +68,29 @@ func (s *Server) getCertificate(hello *tls.ClientHelloInfo) (*tls.Certificate, e
 func (s *Server) Start() error {
 	handler := buildHandler(s.cfg)
 
-	// Generate certs for all configured domains upfront
 	for _, d := range s.cfg.Domains {
-		if !cert.LeafExists(d.Name) {
-			log.Info("Generating certificate for %s.local", d.Name)
-			if err := cert.GenerateLeafCert(d.Name); err != nil {
-				return fmt.Errorf("generating cert for %s: %w", d.Name, err)
-			}
+		if err := cert.EnsureLeafCert(d.Name); err != nil {
+			return fmt.Errorf("ensuring cert for %s: %w", d.Name, err)
 		}
 	}
 
-	// HTTP server redirects to HTTPS
 	s.httpServer = &http.Server{
-		Addr: s.httpAddr,
+		Addr:         s.httpAddr,
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 10 * time.Second,
+		IdleTimeout:  120 * time.Second,
 		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			target := "https://" + r.Host + r.URL.RequestURI()
 			http.Redirect(w, r, target, http.StatusMovedPermanently)
 		}),
 	}
 
-	// HTTPS server with dynamic TLS
 	s.tlsServer = &http.Server{
-		Addr:    s.httpsAddr,
-		Handler: handler,
+		Addr:         s.httpsAddr,
+		ReadTimeout:  30 * time.Second,
+		WriteTimeout: 60 * time.Second,
+		IdleTimeout:  120 * time.Second,
+		Handler:      handler,
 		TLSConfig: &tls.Config{
 			GetCertificate: s.getCertificate,
 		},
@@ -148,17 +151,13 @@ func (s *Server) ReloadConfig() error {
 	}
 
 	for _, d := range cfg.Domains {
-		if !cert.LeafExists(d.Name) {
-			log.Info("Generating certificate for %s.local", d.Name)
-			if err := cert.GenerateLeafCert(d.Name); err != nil {
-				return err
-			}
+		if err := cert.EnsureLeafCert(d.Name); err != nil {
+			return err
 		}
 	}
 
 	s.cfg = cfg
 
-	// Clear cert cache to pick up any new domains
 	s.certMu.Lock()
 	s.certCache = make(map[string]*tls.Certificate)
 	s.certMu.Unlock()

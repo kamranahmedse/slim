@@ -4,9 +4,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 
 	"gopkg.in/yaml.v3"
 )
+
+var validName = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]*[a-z0-9])?$`)
 
 type Domain struct {
 	Name string `yaml:"name"`
@@ -24,6 +27,23 @@ func Dir() string {
 
 func Path() string {
 	return filepath.Join(Dir(), "config.yaml")
+}
+
+func LogPath() string {
+	return filepath.Join(Dir(), "access.log")
+}
+
+func ValidateDomain(name string, port int) error {
+	if name == "" {
+		return fmt.Errorf("domain name cannot be empty")
+	}
+	if !validName.MatchString(name) {
+		return fmt.Errorf("invalid domain name %q: must be lowercase alphanumeric with hyphens", name)
+	}
+	if port < 1 || port > 65535 {
+		return fmt.Errorf("invalid port %d: must be between 1 and 65535", port)
+	}
+	return nil
 }
 
 func Load() (*Config, error) {
@@ -52,10 +72,7 @@ func (c *Config) Save() error {
 		return fmt.Errorf("marshaling config: %w", err)
 	}
 
-	if err := os.WriteFile(Path(), data, 0644); err != nil {
-		return fmt.Errorf("writing config: %w", err)
-	}
-	return nil
+	return os.WriteFile(Path(), data, 0644)
 }
 
 func (c *Config) FindDomain(name string) (*Domain, int) {
@@ -67,11 +84,10 @@ func (c *Config) FindDomain(name string) (*Domain, int) {
 	return nil, -1
 }
 
-func LogPath() string {
-	return filepath.Join(Dir(), "access.log")
-}
-
 func (c *Config) AddDomain(name string, port int) error {
+	if err := ValidateDomain(name, port); err != nil {
+		return err
+	}
 	if existing, _ := c.FindDomain(name); existing != nil {
 		return fmt.Errorf("domain %s.local already exists (port %d)", name, existing.Port)
 	}
@@ -80,6 +96,9 @@ func (c *Config) AddDomain(name string, port int) error {
 }
 
 func (c *Config) SetDomain(name string, port int) error {
+	if err := ValidateDomain(name, port); err != nil {
+		return err
+	}
 	if existing, idx := c.FindDomain(name); existing != nil {
 		c.Domains[idx].Port = port
 		return c.Save()

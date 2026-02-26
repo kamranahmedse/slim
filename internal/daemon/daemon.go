@@ -79,7 +79,7 @@ func run() error {
 		return err
 	}
 
-	srv := proxy.NewServer(cfg, ":10080", ":10443")
+	srv := proxy.NewServer(cfg, proxy.HTTPPort, proxy.HTTPSPort)
 
 	responder := mdns.New()
 	for _, d := range cfg.Domains {
@@ -94,7 +94,9 @@ func run() error {
 	}
 	go ipc.Serve()
 
-	os.WriteFile(PidPath(), []byte(strconv.Itoa(os.Getpid())), 0644)
+	if err := os.WriteFile(PidPath(), []byte(strconv.Itoa(os.Getpid())), 0644); err != nil {
+		return fmt.Errorf("writing pid file: %w", err)
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -124,73 +126,93 @@ func handleIPC(req Request, srv *proxy.Server, responder *mdns.Responder) Respon
 		return Response{OK: true}
 
 	case MsgStatus:
-		cfg, err := config.Load()
-		if err != nil {
-			return Response{OK: false, Error: err.Error()}
-		}
-
-		var domains []DomainInfo
-		for _, d := range cfg.Domains {
-			domains = append(domains, DomainInfo{
-				Name:    d.Name,
-				Port:    d.Port,
-				Healthy: proxy.CheckUpstream(d.Port),
-			})
-		}
-
-		status := StatusData{
-			Running: true,
-			PID:     os.Getpid(),
-			Domains: domains,
-		}
-		data, _ := json.Marshal(status)
-		return Response{OK: true, Data: data}
+		return handleStatus()
 
 	case MsgReload:
-		if err := srv.ReloadConfig(); err != nil {
-			return Response{OK: false, Error: err.Error()}
-		}
-
-		cfg, _ := config.Load()
-		responder.Shutdown(context.Background())
-		for _, d := range cfg.Domains {
-			responder.Register(d.Name, d.Port)
-		}
-		return Response{OK: true}
+		return handleReload(srv, responder)
 
 	case MsgAddDomain:
-		var dd DomainData
-		json.Unmarshal(req.Data, &dd)
-
-		cfg, err := config.Load()
-		if err != nil {
-			return Response{OK: false, Error: err.Error()}
-		}
-		if err := cfg.AddDomain(dd.Name, dd.Port); err != nil {
-			return Response{OK: false, Error: err.Error()}
-		}
-		if !cert.LeafExists(dd.Name) {
-			cert.GenerateLeafCert(dd.Name)
-		}
-		srv.ReloadConfig()
-		responder.Register(dd.Name, dd.Port)
-		return Response{OK: true}
+		return handleAddDomain(req, srv, responder)
 
 	case MsgRemoveDomain:
-		var dd DomainData
-		json.Unmarshal(req.Data, &dd)
-
-		cfg, err := config.Load()
-		if err != nil {
-			return Response{OK: false, Error: err.Error()}
-		}
-		if err := cfg.RemoveDomain(dd.Name); err != nil {
-			return Response{OK: false, Error: err.Error()}
-		}
-		srv.ReloadConfig()
-		return Response{OK: true}
+		return handleRemoveDomain(req, srv)
 
 	default:
-		return Response{OK: false, Error: "unknown message type"}
+		return Response{OK: false, Error: fmt.Sprintf("unknown message type: %s", req.Type)}
 	}
+}
+
+func handleStatus() Response {
+	cfg, err := config.Load()
+	if err != nil {
+		return Response{OK: false, Error: err.Error()}
+	}
+
+	var domains []DomainInfo
+	for _, d := range cfg.Domains {
+		domains = append(domains, DomainInfo{
+			Name:    d.Name,
+			Port:    d.Port,
+			Healthy: proxy.CheckUpstream(d.Port),
+		})
+	}
+
+	status := StatusData{
+		Running: true,
+		PID:     os.Getpid(),
+		Domains: domains,
+	}
+	data, _ := json.Marshal(status)
+	return Response{OK: true, Data: data}
+}
+
+func handleReload(srv *proxy.Server, responder *mdns.Responder) Response {
+	if err := srv.ReloadConfig(); err != nil {
+		return Response{OK: false, Error: err.Error()}
+	}
+
+	cfg, _ := config.Load()
+	responder.Shutdown(context.Background())
+	for _, d := range cfg.Domains {
+		responder.Register(d.Name, d.Port)
+	}
+	return Response{OK: true}
+}
+
+func handleAddDomain(req Request, srv *proxy.Server, responder *mdns.Responder) Response {
+	var dd DomainData
+	if err := json.Unmarshal(req.Data, &dd); err != nil {
+		return Response{OK: false, Error: fmt.Sprintf("invalid request data: %v", err)}
+	}
+
+	cfg, err := config.Load()
+	if err != nil {
+		return Response{OK: false, Error: err.Error()}
+	}
+	if err := cfg.AddDomain(dd.Name, dd.Port); err != nil {
+		return Response{OK: false, Error: err.Error()}
+	}
+	if err := cert.EnsureLeafCert(dd.Name); err != nil {
+		return Response{OK: false, Error: err.Error()}
+	}
+	srv.ReloadConfig()
+	responder.Register(dd.Name, dd.Port)
+	return Response{OK: true}
+}
+
+func handleRemoveDomain(req Request, srv *proxy.Server) Response {
+	var dd DomainData
+	if err := json.Unmarshal(req.Data, &dd); err != nil {
+		return Response{OK: false, Error: fmt.Sprintf("invalid request data: %v", err)}
+	}
+
+	cfg, err := config.Load()
+	if err != nil {
+		return Response{OK: false, Error: err.Error()}
+	}
+	if err := cfg.RemoveDomain(dd.Name); err != nil {
+		return Response{OK: false, Error: err.Error()}
+	}
+	srv.ReloadConfig()
+	return Response{OK: true}
 }

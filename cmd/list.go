@@ -8,6 +8,7 @@ import (
 
 	"github.com/kamrify/localname/internal/config"
 	"github.com/kamrify/localname/internal/daemon"
+	"github.com/kamrify/localname/internal/log"
 	"github.com/kamrify/localname/internal/proxy"
 	"github.com/spf13/cobra"
 )
@@ -57,19 +58,15 @@ var listCmd = &cobra.Command{
 		}
 
 		w := tabwriter.NewWriter(os.Stdout, 0, 4, 2, ' ', 0)
-		if running {
-			fmt.Fprintln(w, "DOMAIN\tPORT\tSTATUS")
-		} else {
-			fmt.Fprintln(w, "DOMAIN\tPORT\tSTATUS")
-		}
+		fmt.Fprintln(w, "DOMAIN\tPORT\tSTATUS")
 
 		for _, e := range entries {
-			status := "\033[2m-\033[0m"
+			status := log.Dim + "-" + log.Reset
 			if e.Healthy != nil {
 				if *e.Healthy {
-					status = "\033[32m● reachable\033[0m"
+					status = log.Green + "● reachable" + log.Reset
 				} else {
-					status = "\033[31m● unreachable\033[0m"
+					status = log.Red + "● unreachable" + log.Reset
 				}
 			}
 			fmt.Fprintf(w, "%s\t%d\t%s\n", e.Domain, e.Port, status)
