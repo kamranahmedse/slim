@@ -5,7 +5,7 @@
 <h1 align="center">Slim</h1>
 
 <p align="center">
-  One command to map any local app to a clean HTTPS domain
+  Simple command to get a clean HTTPS <code>.local</code> for your local projects
 </p>
 
 <p align="center">
