@@ -1,18 +1,25 @@
 <p align="center">
-  <img src="docs/public/favicon.png" alt="Slim logo" width="88" height="88" />
+  <img src="docs/public/favicon.png" alt="Slim logo" width="64" height="64" />
 </p>
 
 <h1 align="center">Slim</h1>
 
 <p align="center">
-  Pretty local domains mapped to your dev ports with automatic HTTPS and WebSocket passthrough.
+  Map friendly local domains to your dev ports with automatic HTTPS and WebSocket passthrough.
 </p>
 
 <p align="center">
   <a href="https://slim.sh"><img src="https://img.shields.io/badge/website-slim.sh-0f172a?style=flat-square" alt="Website"></a>
-  <a href="https://github.com/kamranahmedse/slim/blob/main/LICENSE"><img src="https://img.shields.io/github/license/kamranahmedse/slim?style=flat-square" alt="License"></a>
+  <a href="./LICENSE"><img src="https://img.shields.io/badge/license-PolyForm%20Shield-16a34a?style=flat-square" alt="PolyForm Shield License 1.0.0"></a>
   <img src="https://img.shields.io/badge/go-1.25%2B-00ADD8?style=flat-square&logo=go&logoColor=white" alt="Go 1.25+">
   <img src="https://img.shields.io/badge/platform-macOS%20%7C%20Linux-111827?style=flat-square" alt="Platform">
+</p>
+
+<p align="center">
+  <a href="#install">Install</a> &bull;
+  <a href="#quick-start">Quick Start</a> &bull;
+  <a href="#usage">Usage</a> &bull;
+  <a href="#how-it-works">How It Works</a>
 </p>
 
 ```
