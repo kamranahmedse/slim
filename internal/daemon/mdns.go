@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	"github.com/grandcat/zeroconf"
-	"github.com/kamranahmedse/localname/internal/log"
+	"github.com/kamranahmedse/slim/internal/log"
 )
 
 type mdnsResponder struct {
@@ -43,7 +43,10 @@ func (r *mdnsResponder) register(name string, port int) error {
 		port,
 		hostname,
 		r.ips,
-		[]string{"localname=true"},
+		[]string{
+			"slim=true",
+			"domain=" + name + ".local",
+		},
 		r.ifaces,
 	)
 	if err != nil {
@@ -51,7 +54,7 @@ func (r *mdnsResponder) register(name string, port int) error {
 	}
 
 	r.servers = append(r.servers, srv)
-	log.Info("mDNS: advertising %s.local on LAN", name)
+	log.Info("mDNS: advertising %s.local on LAN via %s", name, hostname)
 	return nil
 }
 

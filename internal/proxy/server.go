@@ -9,15 +9,18 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kamranahmedse/localname/internal/cert"
-	"github.com/kamranahmedse/localname/internal/config"
-	"github.com/kamranahmedse/localname/internal/log"
+	"github.com/kamranahmedse/slim/internal/cert"
+	"github.com/kamranahmedse/slim/internal/config"
+	"github.com/kamranahmedse/slim/internal/log"
 	"golang.org/x/sync/singleflight"
 )
 
 var (
 	HTTPAddr  = fmt.Sprintf(":%d", config.ProxyHTTPPort)
 	HTTPSAddr = fmt.Sprintf(":%d", config.ProxyHTTPSPort)
+
+	ensureLeafCertFn = cert.EnsureLeafCert
+	loadLeafTLSFn    = cert.LoadLeafTLS
 )
 
 type Server struct {
@@ -76,11 +79,11 @@ func (s *Server) getCertificate(hello *tls.ClientHelloInfo) (*tls.Certificate, e
 			return tlsCert, nil
 		}
 
-		if err := cert.EnsureLeafCert(name); err != nil {
+		if err := ensureLeafCertFn(name); err != nil {
 			return nil, fmt.Errorf("ensuring cert for %s: %w", name, err)
 		}
 
-		tlsCert, err := cert.LoadLeafTLS(name)
+		tlsCert, err := loadLeafTLSFn(name)
 		if err != nil {
 			return nil, err
 		}
@@ -209,10 +212,10 @@ func (s *Server) applyConfig(cfg *config.Config) error {
 			defaultDomain = d.Name
 		}
 
-		if err := cert.EnsureLeafCert(d.Name); err != nil {
+		if err := ensureLeafCertFn(d.Name); err != nil {
 			return fmt.Errorf("ensuring cert for %s: %w", d.Name, err)
 		}
-		tlsCert, err := cert.LoadLeafTLS(d.Name)
+		tlsCert, err := loadLeafTLSFn(d.Name)
 		if err != nil {
 			return fmt.Errorf("loading cert for %s: %w", d.Name, err)
 		}

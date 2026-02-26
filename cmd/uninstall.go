@@ -4,19 +4,19 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/kamranahmedse/localname/internal/cert"
-	"github.com/kamranahmedse/localname/internal/config"
-	"github.com/kamranahmedse/localname/internal/daemon"
-	"github.com/kamranahmedse/localname/internal/system"
+	"github.com/kamranahmedse/slim/internal/cert"
+	"github.com/kamranahmedse/slim/internal/config"
+	"github.com/kamranahmedse/slim/internal/daemon"
+	"github.com/kamranahmedse/slim/internal/system"
 	"github.com/spf13/cobra"
 )
 
 var uninstallCmd = &cobra.Command{
 	Use:   "uninstall",
-	Short: "Remove all localname data and configuration",
+	Short: "Remove all slim data and configuration",
 	Args:  cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		fmt.Println("Uninstalling localname...")
+		fmt.Println("Uninstalling slim...")
 
 		if daemon.IsRunning() {
 			fmt.Print("  Stopping daemon... ")
@@ -49,11 +49,11 @@ var uninstallCmd = &cobra.Command{
 			fmt.Println("done")
 		}
 
-		fmt.Print("  Removing ~/.localname/... ")
+		fmt.Print("  Removing ~/.slim/... ")
 		os.RemoveAll(config.Dir())
 		fmt.Println("done")
 
-		fmt.Println("\nlocalname has been completely removed.")
+		fmt.Println("\nslim has been completely removed.")
 		return nil
 	},
 }

@@ -8,11 +8,11 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/kamranahmedse/localname/internal/config"
+	"github.com/kamranahmedse/slim/internal/config"
 )
 
-const anchorName = "com.localname"
-const anchorFile = "/etc/pf.anchors/com.localname"
+const anchorName = "com.slim"
+const anchorFile = "/etc/pf.anchors/com.slim"
 
 var pfRules = fmt.Sprintf("rdr pass on lo0 inet proto tcp from any to 127.0.0.1 port 80 -> 127.0.0.1 port %d\nrdr pass on lo0 inet proto tcp from any to 127.0.0.1 port 443 -> 127.0.0.1 port %d\n",
 	config.ProxyHTTPPort, config.ProxyHTTPSPort)

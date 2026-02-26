@@ -2,9 +2,9 @@ version: 2
 
 builds:
   - main: .
-    binary: localname
+    binary: slim
     ldflags:
-      - -s -w -X github.com/kamranahmedse/localname/cmd.Version={{.Version}}
+      - -s -w -X github.com/kamranahmedse/slim/cmd.Version={{.Version}}
     goos:
       - darwin
       - linux
@@ -14,7 +14,7 @@ builds:
 
 archives:
   - format: tar.gz
-    name_template: "localname_{{.Version}}_{{.Os}}_{{.Arch}}"
+    name_template: "slim_{{.Version}}_{{.Os}}_{{.Arch}}"
 
 checksum:
   name_template: "checksums.txt"
@@ -25,4 +25,4 @@ changelog:
 release:
   github:
     owner: kamranahmedse
-    name: localname
+    name: slim

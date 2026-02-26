@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/kamranahmedse/localname/internal/config"
+	"github.com/kamranahmedse/slim/internal/config"
 )
 
 type IPCServer struct {
@@ -65,7 +65,7 @@ func (s *IPCServer) Close() {
 func SendIPC(req Request) (*Response, error) {
 	conn, err := net.DialTimeout("unix", config.SocketPath(), 5*time.Second)
 	if err != nil {
-		return nil, fmt.Errorf("connecting to daemon: %w (is localname running?)", err)
+		return nil, fmt.Errorf("connecting to daemon: %w (is slim running?)", err)
 	}
 	defer conn.Close()
 

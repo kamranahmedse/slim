@@ -3,9 +3,9 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/kamranahmedse/localname/internal/config"
-	"github.com/kamranahmedse/localname/internal/daemon"
-	"github.com/kamranahmedse/localname/internal/system"
+	"github.com/kamranahmedse/slim/internal/config"
+	"github.com/kamranahmedse/slim/internal/daemon"
+	"github.com/kamranahmedse/slim/internal/system"
 	"github.com/spf13/cobra"
 )
 
@@ -14,8 +14,8 @@ var stopCmd = &cobra.Command{
 	Short: "Stop proxying a domain, or stop everything",
 	Long: `Stop proxying a specific domain, or stop all domains and shut down the daemon.
 
-  localname stop myapp    # stop one domain
-  localname stop          # stop everything`,
+  slim stop myapp    # stop one domain
+  slim stop          # stop everything`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) == 0 {

@@ -7,10 +7,10 @@ import (
 	"sync"
 	"text/tabwriter"
 
-	"github.com/kamranahmedse/localname/internal/config"
-	"github.com/kamranahmedse/localname/internal/daemon"
-	"github.com/kamranahmedse/localname/internal/log"
-	"github.com/kamranahmedse/localname/internal/proxy"
+	"github.com/kamranahmedse/slim/internal/config"
+	"github.com/kamranahmedse/slim/internal/daemon"
+	"github.com/kamranahmedse/slim/internal/log"
+	"github.com/kamranahmedse/slim/internal/proxy"
 	"github.com/spf13/cobra"
 )
 
@@ -28,7 +28,7 @@ var listCmd = &cobra.Command{
 		}
 
 		if len(cfg.Domains) == 0 {
-			fmt.Println("No domains configured. Use 'localname start' to add one.")
+			fmt.Println("No domains configured. Use 'slim start' to add one.")
 			return nil
 		}
 
@@ -93,7 +93,7 @@ var listCmd = &cobra.Command{
 		w.Flush()
 
 		if !running {
-			fmt.Println("\nProxy is not running. Use 'localname start' to start it.")
+			fmt.Println("\nProxy is not running. Use 'slim start' to start it.")
 		}
 
 		return nil

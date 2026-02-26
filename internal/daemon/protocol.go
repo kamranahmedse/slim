@@ -32,4 +32,3 @@ type DomainInfo struct {
 	Port    int    `json:"port"`
 	Healthy bool   `json:"healthy"`
 }
-

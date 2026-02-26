@@ -9,19 +9,25 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/kamranahmedse/localname/internal/config"
+	"github.com/kamranahmedse/slim/internal/config"
 )
 
 type linuxPortFwd struct{}
 
-const linuxChainName = "LOCALNAME"
+const linuxChainName = "SLIM"
+
+var (
+	commandExistsLinuxFn = commandExists
+	runPrivilegedLinuxFn = runPrivileged
+	execCommandLinuxFn   = exec.Command
+)
 
 func NewPortForwarder() PortForwarder {
 	return &linuxPortFwd{}
 }
 
 func (l *linuxPortFwd) Enable() error {
-	if !commandExists("iptables") {
+	if !commandExistsLinuxFn("iptables") {
 		return errors.New("iptables not found (install iptables)")
 	}
 
@@ -40,7 +46,7 @@ func (l *linuxPortFwd) Enable() error {
 		return err
 	}
 	if !exists {
-		if output, err := runPrivileged("iptables", "-t", "nat", "-I", "OUTPUT", "1", "-o", "lo", "-p", "tcp", "-j", linuxChainName); err != nil {
+		if output, err := runPrivilegedLinuxFn("iptables", "-t", "nat", "-I", "OUTPUT", "1", "-o", "lo", "-p", "tcp", "-j", linuxChainName); err != nil {
 			return fmt.Errorf("installing OUTPUT jump rule: %s: %w", strings.TrimSpace(string(output)), err)
 		}
 	}
@@ -48,7 +54,7 @@ func (l *linuxPortFwd) Enable() error {
 }
 
 func (l *linuxPortFwd) Disable() error {
-	if !commandExists("iptables") {
+	if !commandExistsLinuxFn("iptables") {
 		return nil
 	}
 
@@ -60,33 +66,33 @@ func (l *linuxPortFwd) Disable() error {
 		if !exists {
 			break
 		}
-		if output, err := runPrivileged("iptables", "-t", "nat", "-D", "OUTPUT", "-o", "lo", "-p", "tcp", "-j", linuxChainName); err != nil {
+		if output, err := runPrivilegedLinuxFn("iptables", "-t", "nat", "-D", "OUTPUT", "-o", "lo", "-p", "tcp", "-j", linuxChainName); err != nil {
 			return fmt.Errorf("removing OUTPUT jump rule: %s: %w", strings.TrimSpace(string(output)), err)
 		}
 	}
 
-	if output, err := runPrivileged("iptables", "-t", "nat", "-F", linuxChainName); err != nil && !iptablesChainMissing(output) {
+	if output, err := runPrivilegedLinuxFn("iptables", "-t", "nat", "-F", linuxChainName); err != nil && !iptablesChainMissing(output) {
 		return fmt.Errorf("flushing chain %s: %s: %w", linuxChainName, strings.TrimSpace(string(output)), err)
 	}
-	if output, err := runPrivileged("iptables", "-t", "nat", "-X", linuxChainName); err != nil && !iptablesChainMissing(output) {
+	if output, err := runPrivilegedLinuxFn("iptables", "-t", "nat", "-X", linuxChainName); err != nil && !iptablesChainMissing(output) {
 		return fmt.Errorf("deleting chain %s: %s: %w", linuxChainName, strings.TrimSpace(string(output)), err)
 	}
 	return nil
 }
 
 func (l *linuxPortFwd) IsEnabled() bool {
-	if !commandExists("iptables") {
+	if !commandExistsLinuxFn("iptables") {
 		return false
 	}
-	cmd := exec.Command("iptables", "-t", "nat", "-C", "OUTPUT", "-o", "lo", "-p", "tcp", "-j", linuxChainName)
+	cmd := execCommandLinuxFn("iptables", "-t", "nat", "-C", "OUTPUT", "-o", "lo", "-p", "tcp", "-j", linuxChainName)
 	return cmd.Run() == nil
 }
 
 func (l *linuxPortFwd) ensureChain() error {
-	if output, err := runPrivileged("iptables", "-t", "nat", "-N", linuxChainName); err != nil && !iptablesChainAlreadyExists(output) {
+	if output, err := runPrivilegedLinuxFn("iptables", "-t", "nat", "-N", linuxChainName); err != nil && !iptablesChainAlreadyExists(output) {
 		return fmt.Errorf("creating chain %s: %s: %w", linuxChainName, strings.TrimSpace(string(output)), err)
 	}
-	if output, err := runPrivileged("iptables", "-t", "nat", "-F", linuxChainName); err != nil {
+	if output, err := runPrivilegedLinuxFn("iptables", "-t", "nat", "-F", linuxChainName); err != nil {
 		return fmt.Errorf("flushing chain %s: %s: %w", linuxChainName, strings.TrimSpace(string(output)), err)
 	}
 	return nil
@@ -102,7 +108,7 @@ func (l *linuxPortFwd) ensureRedirectRule(fromPort int, toPort int) error {
 		"-j", "REDIRECT",
 		"--to-ports", fmt.Sprintf("%d", toPort),
 	}
-	if output, err := runPrivileged("iptables", args...); err != nil {
+	if output, err := runPrivilegedLinuxFn("iptables", args...); err != nil {
 		return fmt.Errorf("adding redirect rule %d->%d: %s: %w", fromPort, toPort, strings.TrimSpace(string(output)), err)
 	}
 	return nil
@@ -110,7 +116,7 @@ func (l *linuxPortFwd) ensureRedirectRule(fromPort int, toPort int) error {
 
 func (l *linuxPortFwd) ruleExists(chain string, ruleArgs ...string) (bool, error) {
 	args := append([]string{"-t", "nat", "-C", chain}, ruleArgs...)
-	output, err := runPrivileged("iptables", args...)
+	output, err := runPrivilegedLinuxFn("iptables", args...)
 	if err == nil {
 		return true, nil
 	}

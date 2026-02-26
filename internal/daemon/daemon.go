@@ -13,9 +13,9 @@ import (
 
 	godaemon "github.com/sevlyar/go-daemon"
 
-	"github.com/kamranahmedse/localname/internal/config"
-	"github.com/kamranahmedse/localname/internal/log"
-	"github.com/kamranahmedse/localname/internal/proxy"
+	"github.com/kamranahmedse/slim/internal/config"
+	"github.com/kamranahmedse/slim/internal/log"
+	"github.com/kamranahmedse/slim/internal/proxy"
 )
 
 func IsRunning() bool {

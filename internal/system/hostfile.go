@@ -7,7 +7,7 @@ import (
 )
 
 const hostsPath = "/etc/hosts"
-const marker = "# localname"
+const marker = "# slim"
 
 func AddHost(name string) error {
 	hostname := name + ".local"

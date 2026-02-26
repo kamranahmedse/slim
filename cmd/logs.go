@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kamranahmedse/localname/internal/config"
-	"github.com/kamranahmedse/localname/internal/log"
+	"github.com/kamranahmedse/slim/internal/config"
+	"github.com/kamranahmedse/slim/internal/log"
 	"github.com/spf13/cobra"
 )
 
@@ -21,19 +21,16 @@ var logsCmd = &cobra.Command{
 	Short: "Show request logs",
 	Long: `Tail the access log. Optionally filter by domain name.
 
-  localname logs             # all domains
-  localname logs myapp       # only myapp.local
-  localname logs -f          # follow (like tail -f)
-  localname logs --flush     # clear log file`,
+  slim logs             # all domains
+  slim logs myapp       # only myapp.local
+  slim logs -f          # follow (like tail -f)
+  slim logs --flush     # clear log file`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		logPath := config.LogPath()
 		if logsFlush {
-			if logsFollow {
-				return fmt.Errorf("--flush cannot be used with --follow")
-			}
-			if len(args) > 0 {
-				return fmt.Errorf("--flush does not support domain filter")
+			if err := validateLogsFlags(logsFlush, logsFollow, len(args)); err != nil {
+				return err
 			}
 
 			if err := os.Truncate(logPath, 0); err != nil {
@@ -50,7 +47,7 @@ var logsCmd = &cobra.Command{
 		f, err := os.Open(logPath)
 		if err != nil {
 			if os.IsNotExist(err) {
-				fmt.Println("No logs yet. Start a domain first with 'localname start'.")
+				fmt.Println("No logs yet. Start a domain first with 'slim start'.")
 				return nil
 			}
 			return err
@@ -90,6 +87,19 @@ var logsCmd = &cobra.Command{
 
 		return nil
 	},
+}
+
+func validateLogsFlags(flush bool, follow bool, argCount int) error {
+	if !flush {
+		return nil
+	}
+	if follow {
+		return fmt.Errorf("--flush cannot be used with --follow")
+	}
+	if argCount > 0 {
+		return fmt.Errorf("--flush does not support domain filter")
+	}
+	return nil
 }
 
 func formatLogLine(line string) string {

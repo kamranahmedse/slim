@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kamranahmedse/localname/internal/log"
+	"github.com/kamranahmedse/slim/internal/log"
 )
 
 type domainRoute struct {
@@ -123,7 +123,7 @@ func (r *statusRecorder) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 
 const notFoundPage = `<!DOCTYPE html>
 <html>
-<head><title>localname - Not Found</title>
+<head><title>slim - Not Found</title>
 <style>
   body { font-family: -apple-system, system-ui, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; background: #0a0a0a; color: #e5e5e5; }
   .container { text-align: center; max-width: 480px; }
@@ -135,15 +135,15 @@ const notFoundPage = `<!DOCTYPE html>
 <body>
 <div class="container">
   <h1>%s</h1>
-  <p>This domain isn't configured in localname.<br>
-  Run <code>localname start &lt;name&gt; --port &lt;port&gt;</code> to set it up.</p>
+  <p>This domain isn't configured in slim.<br>
+  Run <code>slim start &lt;name&gt; --port &lt;port&gt;</code> to set it up.</p>
 </div>
 </body>
 </html>`
 
 const upstreamDownPage = `<!DOCTYPE html>
 <html>
-<head><title>localname - Waiting for server</title>
+<head><title>slim - Waiting for server</title>
 <meta http-equiv="refresh" content="2">
 <style>
   body { font-family: -apple-system, system-ui, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; background: #0a0a0a; color: #e5e5e5; }

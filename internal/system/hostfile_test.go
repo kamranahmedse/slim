@@ -8,12 +8,12 @@ func TestLineHasHost(t *testing.T) {
 		hostname string
 		want     bool
 	}{
-		{"127.0.0.1 myapp.local # localname", "myapp.local", true},
-		{"127.0.0.1 other.local # localname", "myapp.local", false},
-		{"127.0.0.1 myapp.local.extra # localname", "myapp.local", false},
+		{"127.0.0.1 myapp.local # slim", "myapp.local", true},
+		{"127.0.0.1 other.local # slim", "myapp.local", false},
+		{"127.0.0.1 myapp.local.extra # slim", "myapp.local", false},
 		{"# comment", "myapp.local", false},
 		{"", "myapp.local", false},
-		{"127.0.0.1\tmyapp.local\t# localname", "myapp.local", true},
+		{"127.0.0.1\tmyapp.local\t# slim", "myapp.local", true},
 	}
 
 	for _, tt := range tests {
@@ -25,7 +25,7 @@ func TestLineHasHost(t *testing.T) {
 }
 
 func TestHasMarkedEntry(t *testing.T) {
-	content := "127.0.0.1 localhost\n127.0.0.1 myapp.local # localname\n"
+	content := "127.0.0.1 localhost\n127.0.0.1 myapp.local # slim\n"
 
 	if !hasMarkedEntry(content, "myapp.local") {
 		t.Error("expected to find marked entry for myapp.local")

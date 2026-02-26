@@ -112,11 +112,11 @@ func Request(domain string, method string, path string, upstream int, status int
 }
 
 func Info(format string, args ...interface{}) {
-	fmt.Printf("%s[localname]%s %s\n", Cyan, Reset, fmt.Sprintf(format, args...))
+	fmt.Printf("%s[slim]%s %s\n", Cyan, Reset, fmt.Sprintf(format, args...))
 }
 
 func Error(format string, args ...interface{}) {
-	fmt.Printf("%s[localname]%s %s\n", Red, Reset, fmt.Sprintf(format, args...))
+	fmt.Printf("%s[slim]%s %s\n", Red, Reset, fmt.Sprintf(format, args...))
 }
 
 func formatDuration(d time.Duration) string {

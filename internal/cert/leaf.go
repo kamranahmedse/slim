@@ -15,7 +15,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/kamranahmedse/localname/internal/config"
+	"github.com/kamranahmedse/slim/internal/config"
 )
 
 func CertsDir() string {

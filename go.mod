@@ -1,4 +1,4 @@
-module github.com/kamranahmedse/localname
+module github.com/kamranahmedse/slim
 
 go 1.25.0
 

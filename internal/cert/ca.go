@@ -12,7 +12,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/kamranahmedse/localname/internal/config"
+	"github.com/kamranahmedse/slim/internal/config"
 )
 
 func CADir() string {
@@ -51,8 +51,8 @@ func GenerateCA() error {
 	template := &x509.Certificate{
 		SerialNumber: serial,
 		Subject: pkix.Name{
-			Organization: []string{"localname"},
-			CommonName:   "localname Root CA",
+			Organization: []string{"slim"},
+			CommonName:   "slim Root CA",
 		},
 		NotBefore:             time.Now().Add(-1 * time.Hour),
 		NotAfter:              time.Now().Add(10 * 365 * 24 * time.Hour),

@@ -39,7 +39,7 @@ func Init() error {
 	if err != nil {
 		return fmt.Errorf("cannot determine home directory: %w", err)
 	}
-	baseDir = filepath.Join(home, ".localname")
+	baseDir = filepath.Join(home, ".slim")
 	return nil
 }
 
@@ -56,11 +56,11 @@ func LogPath() string {
 }
 
 func SocketPath() string {
-	return filepath.Join(Dir(), "localname.sock")
+	return filepath.Join(Dir(), "slim.sock")
 }
 
 func PidPath() string {
-	return filepath.Join(Dir(), "localname.pid")
+	return filepath.Join(Dir(), "slim.pid")
 }
 
 func ValidateDomain(name string, port int) error {

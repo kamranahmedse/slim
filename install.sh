@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 
-REPO="kamranahmedse/localname"
+REPO="kamranahmedse/slim"
 INSTALL_DIR="/usr/local/bin"
 
 # Detect OS
@@ -34,11 +34,11 @@ if [ -z "$TAG" ]; then
 fi
 
 VERSION="${TAG#v}"
-FILENAME="localname_${VERSION}_${OS}_${ARCH}.tar.gz"
+FILENAME="slim_${VERSION}_${OS}_${ARCH}.tar.gz"
 URL="https://github.com/$REPO/releases/download/${TAG}/${FILENAME}"
 CHECKSUM_URL="https://github.com/$REPO/releases/download/${TAG}/checksums.txt"
 
-echo "Installing localname ${VERSION} (${OS}/${ARCH})..."
+echo "Installing slim ${VERSION} (${OS}/${ARCH})..."
 
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
@@ -58,12 +58,12 @@ fi
 tar -xzf "$TMP/$FILENAME" -C "$TMP"
 
 if [ -w "$INSTALL_DIR" ]; then
-  mv "$TMP/localname" "$INSTALL_DIR/localname"
+  mv "$TMP/slim" "$INSTALL_DIR/slim"
 else
-  sudo mv "$TMP/localname" "$INSTALL_DIR/localname"
+  sudo mv "$TMP/slim" "$INSTALL_DIR/slim"
 fi
 
-chmod +x "$INSTALL_DIR/localname"
+chmod +x "$INSTALL_DIR/slim"
 
-echo "Installed localname to $INSTALL_DIR/localname"
-localname version
+echo "Installed slim to $INSTALL_DIR/slim"
+slim version

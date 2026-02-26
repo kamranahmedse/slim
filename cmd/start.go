@@ -3,16 +3,20 @@ package cmd
 import (
 	"fmt"
 	"strings"
+	"time"
 
-	"github.com/kamranahmedse/localname/internal/cert"
-	"github.com/kamranahmedse/localname/internal/config"
-	"github.com/kamranahmedse/localname/internal/daemon"
-	"github.com/kamranahmedse/localname/internal/system"
+	"github.com/kamranahmedse/slim/internal/cert"
+	"github.com/kamranahmedse/slim/internal/config"
+	"github.com/kamranahmedse/slim/internal/daemon"
+	"github.com/kamranahmedse/slim/internal/proxy"
+	"github.com/kamranahmedse/slim/internal/system"
 	"github.com/spf13/cobra"
 )
 
 var startPort int
 var startLogMode string
+var startWait bool
+var startWaitTimeout time.Duration
 
 var startCmd = &cobra.Command{
 	Use:   "start [name] --port [port]",
@@ -20,13 +24,16 @@ var startCmd = &cobra.Command{
 	Long: `Map a .local domain to a local port and start proxying.
 Runs first-time setup automatically if needed.
 
-  localname start myapp --port 3000
+  slim start myapp --port 3000
   # https://myapp.local → localhost:3000`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name := normalizeName(args[0])
 
 		if err := config.ValidateDomain(name, startPort); err != nil {
+			return err
+		}
+		if err := validateStartWaitFlags(cmd.Flags().Changed("timeout"), startWait, startWaitTimeout); err != nil {
 			return err
 		}
 		if startLogMode != "" {
@@ -73,9 +80,28 @@ Runs first-time setup automatically if needed.
 			}
 		}
 
+		if startWait {
+			fmt.Printf("Waiting for localhost:%d (timeout %s)... ", startPort, startWaitTimeout)
+			if err := proxy.WaitForUpstream(startPort, startWaitTimeout); err != nil {
+				fmt.Println("timed out")
+				return err
+			}
+			fmt.Println("ready")
+		}
+
 		fmt.Printf("https://%s.local → localhost:%d\n", name, startPort)
 		return nil
 	},
+}
+
+func validateStartWaitFlags(timeoutChanged bool, wait bool, timeout time.Duration) error {
+	if timeoutChanged && !wait {
+		return fmt.Errorf("--timeout requires --wait")
+	}
+	if wait && timeout <= 0 {
+		return fmt.Errorf("--timeout must be greater than 0")
+	}
+	return nil
 }
 
 func ensureSetup() error {
@@ -108,6 +134,8 @@ func ensureSetup() error {
 func init() {
 	startCmd.Flags().IntVarP(&startPort, "port", "p", 0, "Local port to proxy to (required)")
 	startCmd.Flags().StringVar(&startLogMode, "log-mode", "", "Access log mode: full|minimal|off")
+	startCmd.Flags().BoolVar(&startWait, "wait", false, "Wait for the upstream app to become reachable before returning")
+	startCmd.Flags().DurationVar(&startWaitTimeout, "timeout", 30*time.Second, "Maximum time to wait for upstream with --wait")
 	startCmd.MarkFlagRequired("port")
 	rootCmd.AddCommand(startCmd)
 }

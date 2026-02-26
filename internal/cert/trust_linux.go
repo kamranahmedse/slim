@@ -12,33 +12,42 @@ import (
 )
 
 const (
-	debianAnchorPath = "/usr/local/share/ca-certificates/localname.crt"
-	rhelAnchorPath   = "/etc/pki/ca-trust/source/anchors/localname.crt"
-	archAnchorPath   = "/etc/ca-certificates/trust-source/anchors/localname.crt"
+	debianAnchorPath = "/usr/local/share/ca-certificates/slim.crt"
+	rhelAnchorPath   = "/etc/pki/ca-trust/source/anchors/slim.crt"
+	archAnchorPath   = "/etc/ca-certificates/trust-source/anchors/slim.crt"
+)
+
+var (
+	readCertFileFn          = os.ReadFile
+	commandExistsFn         = commandExists
+	writeAnchorFileFn       = writeAnchorFile
+	runPrivilegedTrustFn    = runPrivileged
+	removeAnchorFileFn      = removeFilePrivileged
+	detectTrustAnchorPathFn = detectTrustAnchorPath
 )
 
 func TrustCA() error {
-	certPEM, err := os.ReadFile(CACertPath())
+	certPEM, err := readCertFileFn(CACertPath())
 	if err != nil {
 		return fmt.Errorf("reading CA cert: %w", err)
 	}
 
-	if commandExists("update-ca-certificates") {
-		if err := writeAnchorFile(debianAnchorPath, certPEM); err != nil {
+	if commandExistsFn("update-ca-certificates") {
+		if err := writeAnchorFileFn(debianAnchorPath, certPEM); err != nil {
 			return err
 		}
-		if output, err := runPrivileged("update-ca-certificates"); err != nil {
+		if output, err := runPrivilegedTrustFn("update-ca-certificates"); err != nil {
 			return fmt.Errorf("update-ca-certificates failed: %s: %w", strings.TrimSpace(string(output)), err)
 		}
 		return nil
 	}
 
-	if commandExists("update-ca-trust") {
-		anchorPath := detectTrustAnchorPath()
-		if err := writeAnchorFile(anchorPath, certPEM); err != nil {
+	if commandExistsFn("update-ca-trust") {
+		anchorPath := detectTrustAnchorPathFn()
+		if err := writeAnchorFileFn(anchorPath, certPEM); err != nil {
 			return err
 		}
-		if output, err := runPrivileged("update-ca-trust", "extract"); err != nil {
+		if output, err := runPrivilegedTrustFn("update-ca-trust", "extract"); err != nil {
 			return fmt.Errorf("update-ca-trust failed: %s: %w", strings.TrimSpace(string(output)), err)
 		}
 		return nil
@@ -49,20 +58,20 @@ func TrustCA() error {
 
 func UntrustCA() error {
 	for _, path := range []string{debianAnchorPath, rhelAnchorPath, archAnchorPath} {
-		if err := removeFilePrivileged(path); err != nil {
+		if err := removeAnchorFileFn(path); err != nil {
 			return err
 		}
 	}
 
-	if commandExists("update-ca-certificates") {
-		if output, err := runPrivileged("update-ca-certificates"); err != nil {
+	if commandExistsFn("update-ca-certificates") {
+		if output, err := runPrivilegedTrustFn("update-ca-certificates"); err != nil {
 			return fmt.Errorf("update-ca-certificates failed: %s: %w", strings.TrimSpace(string(output)), err)
 		}
 		return nil
 	}
 
-	if commandExists("update-ca-trust") {
-		if output, err := runPrivileged("update-ca-trust", "extract"); err != nil {
+	if commandExistsFn("update-ca-trust") {
+		if output, err := runPrivilegedTrustFn("update-ca-trust", "extract"); err != nil {
 			return fmt.Errorf("update-ca-trust failed: %s: %w", strings.TrimSpace(string(output)), err)
 		}
 		return nil
