@@ -1,0 +1,19 @@
+---
+import CopyButton from './copy-button.astro';
+
+const installCmd = 'curl -sL https://slim.sh/install.sh | sh';
+---
+
+<section class="pt-9" id="install">
+  <div class="max-w-[var(--max-width)] mx-auto px-[var(--padding-x)]">
+    <div class="bg-code-bg rounded-lg px-4 py-3 flex items-center gap-3 overflow-x-auto">
+      <code class="font-mono text-[12.5px] text-[#a3a3a3] whitespace-nowrap flex-1">
+        <span class="text-[#10b981] mr-1.5">$</span> <span class="text-[#7dd3fc]">curl</span> <span class="text-[#a78bfa]">-sL</span> <span class="text-[#34d399]">https://slim.sh/install.sh</span> | <span class="text-[#7dd3fc]">sh</span>
+      </code>
+      <CopyButton text={installCmd} />
+    </div>
+    <p class="text-[12.5px] text-text-tertiary mt-2.5 leading-[1.5]">
+      Install using script above or <a href="https://github.com/kamranahmedse/slim#build-from-source" class="text-text-tertiary underline underline-offset-2 transition-colors hover:text-text-secondary">build from source</a>.
+    </p>
+  </div>
+</section>

@@ -1,0 +1,150 @@
+---
+const props = Astro.props;
+const { code } = props;
+
+const commandBins = new Set(['slim', 'curl', 'sh']);
+const flagPattern = /^--?[a-z0-9][\w-]*$/i;
+const valuePattern = /^\d+([a-z]+)?$/i;
+const urlPattern = /^https?:\/\/\S+$/i;
+const separatorTokens = new Set(['|', '||', '&&', ';']);
+
+const escapeHtml = (value) =>
+  value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
+const highlightCommand = (commandLine) => {
+  const segments = commandLine.split(/(\s+)/);
+  let previousWasFlag = false;
+  let expectExecutable = true;
+
+  return segments
+    .map((segment) => {
+      if (!segment) {
+        return '';
+      }
+
+      if (/^\s+$/.test(segment)) {
+        return segment;
+      }
+
+      const text = escapeHtml(segment);
+
+      if (separatorTokens.has(segment)) {
+        previousWasFlag = false;
+        expectExecutable = true;
+        return `<span class="token-muted">${text}</span>`;
+      }
+
+      if (flagPattern.test(segment)) {
+        previousWasFlag = true;
+        expectExecutable = false;
+        return `<span class="token-flag">${text}</span>`;
+      }
+
+      if (previousWasFlag) {
+        previousWasFlag = false;
+        expectExecutable = false;
+        if (urlPattern.test(segment)) {
+          return `<span class="token-url">${text}</span>`;
+        }
+        return `<span class="token-value">${text}</span>`;
+      }
+
+      if (expectExecutable || commandBins.has(segment)) {
+        expectExecutable = false;
+        return `<span class="token-bin">${text}</span>`;
+      }
+
+      if (urlPattern.test(segment)) {
+        return `<span class="token-url">${text}</span>`;
+      }
+
+      if (valuePattern.test(segment)) {
+        return `<span class="token-value">${text}</span>`;
+      }
+
+      return `<span class="token-text">${text}</span>`;
+    })
+    .join('');
+};
+
+const highlightLine = (line) => {
+  if (!line.trim()) {
+    return '';
+  }
+
+  if (line.startsWith('#')) {
+    return `<span class="token-comment">${escapeHtml(line)}</span>`;
+  }
+
+  if (line.startsWith('$ ')) {
+    const content = line.slice(2);
+    return `<span class="token-prompt">$</span> ${highlightCommand(content)}`;
+  }
+
+  return `<span class="token-text">${escapeHtml(line)}</span>`;
+};
+
+const highlightedCode = code.split('\n').map(highlightLine).join('\n');
+---
+
+<div class="command-code-wrapper">
+  <pre><code set:html={highlightedCode} /></pre>
+</div>
+
+<style>
+  .command-code-wrapper pre {
+    background: #0a0a0a !important;
+    color: #e5e5e5;
+    margin: 0;
+    padding: 14px 16px;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    line-height: 1.6;
+    overflow-x: auto;
+    border-radius: 0;
+  }
+
+  .command-code-wrapper code {
+    background: none !important;
+    padding: 0;
+    font-size: inherit;
+    line-height: inherit;
+  }
+
+  .command-code-wrapper :global(.token-comment) {
+    color: #525252;
+  }
+
+  .command-code-wrapper :global(.token-prompt) {
+    color: #34d399;
+  }
+
+  .command-code-wrapper :global(.token-bin) {
+    color: #7dd3fc;
+  }
+
+  .command-code-wrapper :global(.token-flag) {
+    color: #a78bfa;
+  }
+
+  .command-code-wrapper :global(.token-value) {
+    color: #fbbf24;
+  }
+
+  .command-code-wrapper :global(.token-url) {
+    color: #34d399;
+  }
+
+  .command-code-wrapper :global(.token-muted) {
+    color: #737373;
+  }
+
+  .command-code-wrapper :global(.token-text) {
+    color: #e5e5e5;
+  }
+</style>

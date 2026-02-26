@@ -1,0 +1,22 @@
+---
+import CommandsSection from '../components/commands-section.astro';
+import FeaturesSection from '../components/features-section.astro';
+import HeroSection from '../components/hero-section.astro';
+import HowSection from '../components/how-section.astro';
+import InstallSection from '../components/install-section.astro';
+import SiteFooter from '../components/site-footer.astro';
+import SiteHeader from '../components/site-header.astro';
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout>
+  <SiteHeader />
+  <main>
+    <HeroSection />
+    <InstallSection />
+    <FeaturesSection />
+    <CommandsSection />
+    <HowSection />
+  </main>
+  <SiteFooter />
+</Layout>

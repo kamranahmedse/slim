@@ -1,0 +1,34 @@
+---
+import FeatureRow from './feature-row.astro';
+import ShieldCheck from './icons/shield-check.astro';
+import Bolt from './icons/bolt.astro';
+import Globe from './icons/globe.astro';
+import FileText from './icons/file-text.astro';
+import Activity from './icons/activity.astro';
+import TerminalPrompt from './icons/terminal-prompt.astro';
+---
+
+<section class="pt-10">
+  <div class="max-w-[var(--max-width)] mx-auto px-[var(--padding-x)]">
+    <div class="flex flex-col">
+      <FeatureRow title="Automatic HTTPS" description="Trusted certificates, green lock, no warnings.">
+        <ShieldCheck />
+      </FeatureRow>
+      <FeatureRow title="WebSocket & HMR" description="Next.js, Vite, and others work out of the box.">
+        <Bolt />
+      </FeatureRow>
+      <FeatureRow title="Multiple Domains" description="Each gets its own certificate and proxy.">
+        <Globe />
+      </FeatureRow>
+      <FeatureRow title="Access Logging" description="Full, minimal, or off. Tail and filter by domain.">
+        <FileText />
+      </FeatureRow>
+      <FeatureRow title="Health Monitoring" description="See which upstreams are reachable at a glance.">
+        <Activity />
+      </FeatureRow>
+      <FeatureRow title="Zero Config" description="First run handles CA, trust, and port forwarding.">
+        <TerminalPrompt />
+      </FeatureRow>
+    </div>
+  </div>
+</section>

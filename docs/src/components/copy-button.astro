@@ -1,0 +1,42 @@
+---
+import CopyIcon from './icons/copy.astro';
+import CheckIcon from './icons/check.astro';
+
+const props = Astro.props;
+const { text } = props;
+---
+
+<button
+  class="copy-btn shrink-0 bg-[#262626] border-none rounded-[6px] px-2.5 py-[5px] cursor-pointer text-[#a3a3a3] flex items-center gap-[5px] font-mono text-[11.5px] transition-colors hover:bg-[#333] hover:text-[#d4d4d4] [&.copied]:text-[#34d399]"
+  type="button"
+  aria-label="Copy to clipboard"
+  data-copy-text={text}
+>
+  <CopyIcon class="copy-icon [.copied_&]:hidden" />
+  <CheckIcon class="check-icon hidden [.copied_&]:inline" />
+  <span class="copy-label [.copied_&]:hidden">Copy</span>
+  <span class="copied-label hidden [.copied_&]:inline">Copied!</span>
+</button>
+
+<script>
+  document.querySelectorAll('.copy-btn').forEach(function (btn) {
+    if (btn.getAttribute('data-copy-bound') === 'true') {
+      return;
+    }
+
+    btn.setAttribute('data-copy-bound', 'true');
+    btn.addEventListener('click', function () {
+      const text = btn.getAttribute('data-copy-text');
+      if (!text || !navigator.clipboard) {
+        return;
+      }
+
+      navigator.clipboard.writeText(text).then(function () {
+        btn.classList.add('copied');
+        setTimeout(function () {
+          btn.classList.remove('copied');
+        }, 2000);
+      });
+    });
+  });
+</script>

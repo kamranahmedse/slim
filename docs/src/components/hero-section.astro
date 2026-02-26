@@ -1,0 +1,25 @@
+---
+import TerminalDemo from './terminal-demo.astro';
+---
+
+<section class="mt-[22px] pt-12 text-center max-sm:pt-9">
+  <div class="max-w-[var(--max-width)] mx-auto px-[var(--padding-x)]">
+    <h1 class="font-heading text-[42px] font-semibold leading-[1.15] tracking-[-0.03em] text-text max-sm:text-[28px]">
+      Pretty domains for<br />local development
+    </h1>
+    <p class="text-[15px] leading-[1.6] text-text-secondary mx-auto mb-8 mt-3 max-w-[460px] max-sm:text-sm">
+      Map <code class="bg-[#f5f5f5] px-1.5 py-0.5 rounded text-[13px] text-text">localhost:3000</code> to <code class="bg-[#f5f5f5] px-1.5 py-0.5 rounded text-[13px] text-text">https://myapp.local</code> with trusted
+      certificates, WebSocket passthrough, and zero config.
+    </p>
+
+    <TerminalDemo />
+
+    <div class="flex items-center justify-center gap-2.5 mt-6 pb-1.5">
+      <span class="text-xs text-text-tertiary tracking-[0.01em]">PolyForm Shield License 1.0.0d</span>
+      <span class="text-[#bbb] text-sm">&middot;</span>
+      <span class="text-xs text-text-tertiary tracking-[0.01em]">macOS & Linux</span>
+      <span class="text-[#bbb] text-sm">&middot;</span>
+      <span class="text-xs text-text-tertiary tracking-[0.01em]">Single Binary</span>
+    </div>
+  </div>
+</section>

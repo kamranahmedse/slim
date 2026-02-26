@@ -1,0 +1,35 @@
+---
+import ChevronDown from './icons/chevron-down.astro';
+import CommandCode from './command-code.astro';
+
+const props = Astro.props;
+const { name, description, code, open = false } = props;
+---
+
+<details class="group border border-border rounded-lg overflow-hidden" open={open || undefined}>
+  <summary class="flex items-center justify-between px-3.5 py-2.5 cursor-pointer list-none transition-colors hover:bg-surface group-open:border-b group-open:border-border">
+    <div class="flex items-center gap-2.5 max-sm:flex-col max-sm:items-start max-sm:gap-[3px]">
+      <code class="font-mono text-[13px] font-medium bg-[#f5f5f5] px-[7px] py-0.5 rounded">{name}</code>
+      <span class="text-[13px] text-text-tertiary">{description}</span>
+    </div>
+    <ChevronDown class="chevron text-text-tertiary transition-transform duration-200 shrink-0" />
+  </summary>
+  <div>
+    <CommandCode code={code} />
+  </div>
+</details>
+
+<style>
+  summary::-webkit-details-marker {
+    display: none;
+  }
+
+  summary::marker {
+    display: none;
+    content: '';
+  }
+
+  details[open] :global(.chevron) {
+    transform: rotate(180deg);
+  }
+</style>

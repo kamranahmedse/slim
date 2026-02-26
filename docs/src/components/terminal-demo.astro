@@ -1,0 +1,47 @@
+---
+---
+
+<div class="rounded-[10px] bg-[#0a0a0a] text-left overflow-hidden">
+  <div class="flex gap-1.5 border-b border-[#1a1a1a] px-3.5 py-2.5">
+    <span class="size-2.5 rounded-full bg-[#ff5f57]"></span>
+    <span class="size-2.5 rounded-full bg-[#febc2e]"></span>
+    <span class="size-2.5 rounded-full bg-[#28c840]"></span>
+  </div>
+  <div class="px-[18px] pt-4 pb-[18px] font-mono text-[13px] leading-[1.7] text-code-text max-sm:text-[11.5px]">
+    <div class="flex gap-2">
+      <span class="text-[#10b981] select-none">$</span>
+      <span><span class="text-[#7dd3fc]">slim</span> start myapp <span class="text-[#a78bfa]">--port</span> <span class="text-[#fbbf24]">3000</span></span>
+    </div>
+    <div class="pl-4 whitespace-nowrap">
+      <span class="text-[#34d399]">&#10003;</span> <span class="text-[#34d399] font-medium">https://myapp.local</span> <span class="text-[#525252]">&rarr;</span> <span class="text-[#737373]">localhost:3000</span>
+    </div>
+    <div class="flex gap-2 mt-2.5">
+      <span class="text-[#10b981] select-none">$</span>
+      <span><span class="text-[#7dd3fc]">slim</span> start api <span class="text-[#a78bfa]">--port</span> <span class="text-[#fbbf24]">8080</span></span>
+    </div>
+    <div class="pl-4 whitespace-nowrap">
+      <span class="text-[#34d399]">&#10003;</span> <span class="text-[#34d399] font-medium">https://api.local</span> <span class="text-[#525252]">&rarr;</span> <span class="text-[#737373]">localhost:8080</span>
+    </div>
+    <div class="flex gap-2 mt-2.5">
+      <span class="text-[#10b981] select-none">$</span>
+      <span><span class="text-[#7dd3fc]">slim</span> list</span>
+    </div>
+    <div class="pl-4 mt-0.5">
+      <div class="grid grid-cols-[120px_50px_1fr] max-sm:grid-cols-[100px_44px_1fr]">
+        <span class="text-[#525252] text-xs uppercase tracking-[0.03em]">DOMAIN</span>
+        <span class="text-[#525252] text-xs uppercase tracking-[0.03em]">PORT</span>
+        <span class="text-[#525252] text-xs uppercase tracking-[0.03em]">STATUS</span>
+      </div>
+      <div class="grid grid-cols-[120px_50px_1fr] max-sm:grid-cols-[100px_44px_1fr]">
+        <span class="text-code-text">myapp.local</span>
+        <span class="text-[#a3a3a3]">3000</span>
+        <span class="text-[#a3a3a3]"><span class="text-[#34d399]">&#9679;</span> healthy</span>
+      </div>
+      <div class="grid grid-cols-[120px_50px_1fr] max-sm:grid-cols-[100px_44px_1fr]">
+        <span class="text-code-text">api.local</span>
+        <span class="text-[#a3a3a3]">8080</span>
+        <span class="text-[#a3a3a3]"><span class="text-[#34d399]">&#9679;</span> healthy</span>
+      </div>
+    </div>
+  </div>
+</div>

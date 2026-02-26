@@ -1,0 +1,34 @@
+---
+import HowStep from './how-step.astro';
+---
+
+<section class="pt-11">
+  <div class="max-w-[var(--max-width)] mx-auto px-[var(--padding-x)]">
+    <h2 class="font-heading text-[22px] font-semibold tracking-[-0.02em] mb-1.5 text-text max-sm:text-xl">How it works</h2>
+    <p class="text-text-tertiary text-sm mb-4 leading-[1.5]">
+      A single Go binary that handles everything under the hood.
+    </p>
+    <div class="flex flex-col">
+      <HowStep number="1">
+        <strong class="text-[13.5px] font-semibold text-text">Generates a root CA</strong>
+        <span class="text-[13.5px] text-text-tertiary ml-0.5 max-sm:block max-sm:ml-0 max-sm:mt-0.5">and trusts it in macOS Keychain or Linux CA store.</span>
+      </HowStep>
+      <HowStep number="2">
+        <strong class="text-[13.5px] font-semibold text-text">Creates per-domain certificates</strong>
+        <span class="text-[13.5px] text-text-tertiary ml-0.5 max-sm:block max-sm:ml-0 max-sm:mt-0.5">on demand, served via SNI for each <code class="bg-[#f5f5f5] px-[5px] py-px rounded-[3px] text-xs">.local</code> domain.</span>
+      </HowStep>
+      <HowStep number="3">
+        <strong class="text-[13.5px] font-semibold text-text">Manages <code class="bg-[#f5f5f5] px-[5px] py-px rounded-[3px] text-xs font-medium">/etc/hosts</code></strong>
+        <span class="text-[13.5px] text-text-tertiary ml-0.5 max-sm:block max-sm:ml-0 max-sm:mt-0.5">entries automatically, pointing domains to <code class="bg-[#f5f5f5] px-[5px] py-px rounded-[3px] text-xs">127.0.0.1</code>.</span>
+      </HowStep>
+      <HowStep number="4">
+        <strong class="text-[13.5px] font-semibold text-text">Forwards ports 80/443</strong>
+        <span class="text-[13.5px] text-text-tertiary ml-0.5 max-sm:block max-sm:ml-0 max-sm:mt-0.5">via <code class="bg-[#f5f5f5] px-[5px] py-px rounded-[3px] text-xs">pfctl</code> or <code class="bg-[#f5f5f5] px-[5px] py-px rounded-[3px] text-xs">iptables</code> so the proxy runs unprivileged.</span>
+      </HowStep>
+      <HowStep number="5">
+        <strong class="text-[13.5px] font-semibold text-text">Reverse proxies requests</strong>
+        <span class="text-[13.5px] text-text-tertiary ml-0.5 max-sm:block max-sm:ml-0 max-sm:mt-0.5">with HTTP/2, WebSocket upgrades, and CORS headers.</span>
+      </HowStep>
+    </div>
+  </div>
+</section>

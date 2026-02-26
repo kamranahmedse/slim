@@ -1,3 +1,9 @@
 slim
 *.exe
 .DS_Store
+node_modules/
+
+# Astro docs app artifacts
+docs/node_modules/
+docs/.astro/
+docs/dist/

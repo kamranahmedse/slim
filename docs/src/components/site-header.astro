@@ -1,0 +1,22 @@
+---
+import GitHubIcon from './icons/github.astro';
+---
+
+<header class="sticky top-0 z-[100] bg-white/90 backdrop-blur-[12px] border-b border-border py-3">
+  <div class="max-w-[var(--max-width)] mx-auto px-[var(--padding-x)] flex items-center justify-between">
+    <a href="/slim/" class="font-body text-lg font-semibold text-text no-underline inline-flex items-center gap-[5px] hover:no-underline">Slim</a>
+    <nav class="flex items-center gap-5">
+      <a href="#commands" class="text-[13px] text-text-tertiary no-underline transition-colors hover:text-text hover:no-underline">Commands</a>
+      <a href="#install" class="text-[13px] text-text-tertiary no-underline transition-colors hover:text-text hover:no-underline">Install</a>
+      <a
+        href="https://github.com/kamranahmedse/slim"
+        class="inline-flex items-center gap-1 text-text-tertiary transition-colors hover:text-text hover:no-underline"
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="GitHub"
+      >
+        <GitHubIcon />
+      </a>
+    </nav>
+  </div>
+</header>

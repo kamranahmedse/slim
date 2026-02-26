@@ -1,0 +1,56 @@
+---
+import CommandDetail from './command-detail.astro';
+
+const startCode = `# Map your Next.js app
+$ slim start myapp --port 3000
+
+# Add your API server
+$ slim start api -p 8080
+
+# Enable access logging
+$ slim start dashboard -p 5173 --log-mode full
+
+# Wait for upstream to be ready
+$ slim start myapp -p 3000 --wait --timeout 30s`;
+
+const listCode = `# Show all domains with health status
+$ slim list
+
+# Output as JSON
+$ slim list --json`;
+
+const logsCode = `# Tail all access logs
+$ slim logs
+
+# Follow logs for a specific domain
+$ slim logs -f myapp
+
+# Clear all logs
+$ slim logs --flush`;
+
+const stopCode = `# Stop a specific domain
+$ slim stop myapp
+
+# Stop all domains and shutdown daemon
+$ slim stop`;
+
+const uninstallCode = `# Removes everything: CA, certs, hosts entries,
+# port-forward rules, and config
+$ slim uninstall`;
+---
+
+<section class="pt-11" id="commands">
+  <div class="max-w-[var(--max-width)] mx-auto px-[var(--padding-x)]">
+    <h2 class="font-heading text-[22px] font-semibold tracking-[-0.02em] mb-1.5 text-text max-sm:text-xl">Commands</h2>
+    <p class="text-text-tertiary text-sm mb-4 leading-[1.5]">
+      Everything is one <code class="bg-[#f5f5f5] px-[5px] py-px rounded-[3px] text-[12.5px] text-text-secondary">slim</code> command away.
+    </p>
+    <div class="flex flex-col gap-1.5">
+      <CommandDetail name="slim start <name>" description="Map a domain to a port" code={startCode} open />
+      <CommandDetail name="slim list" description="See what's running" code={listCode} />
+      <CommandDetail name="slim logs" description="View access logs" code={logsCode} />
+      <CommandDetail name="slim stop" description="Stop proxying" code={stopCode} />
+      <CommandDetail name="slim uninstall" description="Remove everything" code={uninstallCode} />
+    </div>
+  </div>
+</section>

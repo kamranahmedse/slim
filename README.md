@@ -11,7 +11,7 @@ dashboard.local → localhost:5173
 ## Install
 
 ```bash
-curl -sL https://raw.githubusercontent.com/kamranahmedse/slim/main/install.sh | sh
+curl -sL https://slim.sh/install.sh | sh
 ```
 
 Or build from source:
@@ -44,6 +44,7 @@ slim start api -p 8080          # add another
 slim start myapp -p 3000 --log-mode minimal  # access logs: full|minimal|off
 slim start myapp -p 3000 --wait --timeout 30s # wait for upstream readiness
 slim list                       # see what's running + health
+slim list --json                # JSON output
 slim logs                       # tail request logs
 slim logs -f myapp              # follow logs for one domain
 slim logs --flush               # clear access logs
@@ -61,7 +62,7 @@ slim uninstall   # removes everything: CA, certs, hosts entries, port-forward ru
 ## How It Works
 
 - **HTTPS**: A root CA is generated on first use and trusted in the system trust store (macOS Keychain or Linux CA store). Per-domain leaf certificates are created on demand and served via SNI.
-- **Reverse proxy**: Go's `httputil.ReverseProxy` handles HTTP, HTTPS, and WebSocket upgrades natively — HMR for Next.js, Vite, etc. works out of the box.
+- **Reverse proxy**: Go's `httputil.ReverseProxy` handles HTTP/2, WebSocket upgrades, and CORS natively — HMR for Next.js, Vite, etc. works out of the box.
 - **Local resolution**: `/etc/hosts` entries are managed automatically.
 - **LAN discovery**: Optional mDNS (Bonjour/Avahi) service announcements can help discover running apps on the local network.
 - **Port forwarding**: macOS `pfctl` or Linux `iptables` redirects ports 80/443 to unprivileged 10080/10443 so the proxy doesn't need root.
@@ -81,26 +82,7 @@ slim start myapp --port 3000 --log-mode off
 
 ## Requirements
 
-First-time setup requires `sudo` for:
-- Trusting the root CA in the system trust store (macOS and Linux)
-- Setting up port forwarding rules (macOS: `pfctl`, Linux: `iptables`)
-- Managing `/etc/hosts` entries
-
-On Linux, CA trust uses one of: `update-ca-certificates` (Debian/Ubuntu) or `update-ca-trust` (RHEL/Fedora/Arch-family setups).
-
-After trusting the CA, you may need to restart your browser for it to recognize the new root certificate.
-
-## Platform Support
-
-- **macOS**: Full support (port forwarding via `pfctl`, CA trust via Keychain)
-- **Linux**: Full support for hosts management, CA trust (via `update-ca-certificates` or `update-ca-trust`), and port forwarding (via `iptables`)
-
-## Notes on `.local`
-
-`.local` is handled locally via `/etc/hosts`, so it resolves on the machine where `slim` is configured.
-For other devices on your LAN, either:
-- Run `slim` on that device too, or
-- Point those devices at your machine with custom DNS/network configuration.
+First-time setup requires `sudo` for CA trust, port forwarding, and `/etc/hosts` management. macOS and Linux supported.
 
 ## License
 
