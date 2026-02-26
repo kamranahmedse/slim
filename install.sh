@@ -27,7 +27,7 @@ case "$ARCH" in
 esac
 
 # Get latest version
-TAG=$(curl -sI "https://github.com/$REPO/releases/latest" | grep -i "^location:" | sed 's/.*tag\///' | tr -d '\r\n')
+TAG=$(curl -fsI "https://github.com/$REPO/releases/latest" | grep -i "^location:" | sed 's/.*tag\///' | tr -d '\r\n')
 if [ -z "$TAG" ]; then
   echo "Failed to fetch latest version"
   exit 1
@@ -43,14 +43,14 @@ echo "Installing slim ${VERSION} (${OS}/${ARCH})..."
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 
-curl -sL "$URL" -o "$TMP/$FILENAME"
-curl -sL "$CHECKSUM_URL" -o "$TMP/checksums.txt"
+curl -fL --progress-bar "$URL" -o "$TMP/$FILENAME"
+curl -fsSL "$CHECKSUM_URL" -o "$TMP/checksums.txt"
 
 # Verify checksum
-if command -v sha256sum >/dev/null 2>&1; then
-  (cd "$TMP" && grep "$FILENAME" checksums.txt | sha256sum -c --quiet)
-elif command -v shasum >/dev/null 2>&1; then
+if [ "$OS" = "darwin" ]; then
   (cd "$TMP" && grep "$FILENAME" checksums.txt | shasum -a 256 -c --quiet)
+elif command -v sha256sum >/dev/null 2>&1; then
+  (cd "$TMP" && grep "$FILENAME" checksums.txt | sha256sum -c --quiet)
 else
   echo "Warning: cannot verify checksum (sha256sum/shasum not found)"
 fi
