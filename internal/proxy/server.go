@@ -12,6 +12,7 @@ import (
 	"github.com/kamranahmedse/slim/internal/cert"
 	"github.com/kamranahmedse/slim/internal/config"
 	"github.com/kamranahmedse/slim/internal/log"
+	"golang.org/x/net/http2"
 	"golang.org/x/sync/singleflight"
 )
 
@@ -117,7 +118,7 @@ func (s *Server) Start() error {
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       5 * time.Second,
 		WriteTimeout:      10 * time.Second,
-		IdleTimeout:       120 * time.Second,
+		IdleTimeout:       2 * time.Hour,
 		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			target := "https://" + r.Host + r.URL.RequestURI()
 			http.Redirect(w, r, target, http.StatusMovedPermanently)
@@ -127,11 +128,15 @@ func (s *Server) Start() error {
 	s.tlsServer = &http.Server{
 		Addr:              s.httpsAddr,
 		ReadHeaderTimeout: 5 * time.Second,
-		IdleTimeout:       120 * time.Second,
+		IdleTimeout:       2 * time.Hour,
 		Handler:           handler,
 		TLSConfig: &tls.Config{
 			GetCertificate: s.getCertificate,
 		},
+	}
+
+	if err := http2.ConfigureServer(s.tlsServer, nil); err != nil {
+		return fmt.Errorf("configuring HTTP/2: %w", err)
 	}
 
 	httpLn, err := net.Listen("tcp", s.httpAddr)
@@ -266,6 +271,6 @@ func newUpstreamTransport() *http.Transport {
 	transport.MaxIdleConns = 512
 	transport.MaxIdleConnsPerHost = 128
 	transport.MaxConnsPerHost = 256
-	transport.IdleConnTimeout = 120 * time.Second
+	transport.IdleConnTimeout = 2 * time.Hour
 	return transport
 }
