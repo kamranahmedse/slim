@@ -14,6 +14,7 @@ import (
 )
 
 var logsFollow bool
+var logsFlush bool
 
 var logsCmd = &cobra.Command{
 	Use:   "logs [name]",
@@ -22,10 +23,29 @@ var logsCmd = &cobra.Command{
 
   localname logs             # all domains
   localname logs myapp       # only myapp.local
-  localname logs -f          # follow (like tail -f)`,
+  localname logs -f          # follow (like tail -f)
+  localname logs --flush     # clear log file`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		logPath := config.LogPath()
+		if logsFlush {
+			if logsFollow {
+				return fmt.Errorf("--flush cannot be used with --follow")
+			}
+			if len(args) > 0 {
+				return fmt.Errorf("--flush does not support domain filter")
+			}
+
+			if err := os.Truncate(logPath, 0); err != nil {
+				if os.IsNotExist(err) {
+					fmt.Println("No logs to clear.")
+					return nil
+				}
+				return fmt.Errorf("clearing logs: %w", err)
+			}
+			fmt.Println("Cleared access logs.")
+			return nil
+		}
 
 		f, err := os.Open(logPath)
 		if err != nil {
@@ -137,5 +157,6 @@ func formatLogLine(line string) string {
 
 func init() {
 	logsCmd.Flags().BoolVarP(&logsFollow, "follow", "f", false, "Follow log output")
+	logsCmd.Flags().BoolVar(&logsFlush, "flush", false, "Clear the access log file")
 	rootCmd.AddCommand(logsCmd)
 }
