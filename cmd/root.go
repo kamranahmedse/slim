@@ -23,6 +23,7 @@ mDNS for LAN access, and WebSocket passthrough for HMR.
 }
 
 func Execute() error {
+	rootCmd.CompletionOptions.DisableDefaultCmd = true
 	return rootCmd.Execute()
 }
 
