@@ -102,6 +102,23 @@ func Login() (*Info, error) {
 	return nil, fmt.Errorf("login timed out — please try again")
 }
 
+func LoadAuth() (*Info, error) {
+	data, err := os.ReadFile(config.AuthPath())
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to read auth file: %w", err)
+	}
+
+	var info Info
+	if err := json.Unmarshal(data, &info); err != nil {
+		return nil, fmt.Errorf("failed to parse auth file: %w", err)
+	}
+
+	return &info, nil
+}
+
 func Logout() error {
 	err := os.Remove(config.AuthPath())
 	if err != nil {

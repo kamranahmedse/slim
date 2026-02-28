@@ -29,7 +29,7 @@ var shareCmd = &cobra.Command{
 	Long: `Expose a local dev server to the internet via a slim.sh tunnel.
 
   slim share myapp --port 3000
-  slim share myapp --port 3000 --name myapp
+  slim share myapp --port 3000 --subdomain cool
   slim share myapp --port 3000 --password
   slim share myapp --port 3000 --ttl 2h`,
 	Args: cobra.ExactArgs(1),
@@ -55,10 +55,14 @@ var shareCmd = &cobra.Command{
 			return fmt.Errorf("invalid port %d: must be between 1 and 65535", port)
 		}
 
-		token, err := auth.LoadOrCreateToken()
+		info, err := auth.LoadAuth()
 		if err != nil {
-			return fmt.Errorf("loading tunnel token: %w", err)
+			return err
 		}
+		if info == nil {
+			return fmt.Errorf("not logged in — run 'slim login' first")
+		}
+		token := info.Token
 
 		serverURL := os.Getenv("SLIM_TUNNEL_SERVER")
 		if serverURL == "" {
@@ -121,7 +125,7 @@ var shareCmd = &cobra.Command{
 
 func init() {
 	shareCmd.Flags().IntVarP(&sharePort, "port", "p", 0, "Local port to expose")
-	shareCmd.Flags().StringVar(&shareName, "name", "", "Vanity subdomain name")
+	shareCmd.Flags().StringVar(&shareName, "subdomain", "", "Vanity subdomain name")
 	shareCmd.Flags().BoolVar(&sharePassword, "password", false, "Require password (auto-generated)")
 	shareCmd.Flags().DurationVar(&shareTTL, "ttl", 8*time.Hour, "Tunnel time-to-live")
 	rootCmd.AddCommand(shareCmd)
