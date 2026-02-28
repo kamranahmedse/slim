@@ -69,6 +69,10 @@ func TunnelTokenPath() string {
 	return filepath.Join(Dir(), "tunnel-token")
 }
 
+func AuthPath() string {
+	return filepath.Join(Dir(), "auth.json")
+}
+
 func ValidateDomain(name string, port int) error {
 	if name == "" {
 		return fmt.Errorf("domain name cannot be empty")
