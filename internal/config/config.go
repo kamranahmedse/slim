@@ -14,14 +14,9 @@ import (
 var validName = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]*[a-z0-9])?$`)
 
 const (
-	ProxyHTTPPort  = 10080
-	ProxyHTTPSPort = 10443
-
 	LogModeFull    = "full"
 	LogModeMinimal = "minimal"
 	LogModeOff     = "off"
-
-	TunnelServerURL = "wss://app.slim.sh/tunnel"
 )
 
 type Domain struct {
@@ -32,45 +27,6 @@ type Domain struct {
 type Config struct {
 	Domains []Domain `yaml:"domains"`
 	LogMode string   `yaml:"log_mode,omitempty"`
-}
-
-var baseDir string
-
-func Init() error {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return fmt.Errorf("cannot determine home directory: %w", err)
-	}
-	baseDir = filepath.Join(home, ".slim")
-	return nil
-}
-
-func Dir() string {
-	return baseDir
-}
-
-func Path() string {
-	return filepath.Join(Dir(), "config.yaml")
-}
-
-func LogPath() string {
-	return filepath.Join(Dir(), "access.log")
-}
-
-func SocketPath() string {
-	return filepath.Join(Dir(), "slim.sock")
-}
-
-func PidPath() string {
-	return filepath.Join(Dir(), "slim.pid")
-}
-
-func TunnelTokenPath() string {
-	return filepath.Join(Dir(), "tunnel-token")
-}
-
-func AuthPath() string {
-	return filepath.Join(Dir(), "auth.json")
 }
 
 func ValidateDomain(name string, port int) error {

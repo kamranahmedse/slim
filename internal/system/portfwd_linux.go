@@ -5,11 +5,11 @@ package system
 import (
 	"errors"
 	"fmt"
-	"os"
 	"os/exec"
 	"strings"
 
 	"github.com/kamranahmedse/slim/internal/config"
+	"github.com/kamranahmedse/slim/internal/osutil"
 )
 
 type linuxPortFwd struct{}
@@ -17,8 +17,8 @@ type linuxPortFwd struct{}
 const linuxChainName = "SLIM"
 
 var (
-	commandExistsLinuxFn = commandExists
-	runPrivilegedLinuxFn = runPrivileged
+	commandExistsLinuxFn = osutil.CommandExists
+	runPrivilegedLinuxFn = osutil.RunPrivileged
 	execCommandLinuxFn   = exec.Command
 )
 
@@ -135,17 +135,4 @@ func iptablesChainAlreadyExists(output []byte) bool {
 func iptablesChainMissing(output []byte) bool {
 	msg := strings.ToLower(strings.TrimSpace(string(output)))
 	return strings.Contains(msg, "no chain/target/match by that name") || strings.Contains(msg, "does a matching rule exist") || strings.Contains(msg, "not found")
-}
-
-func runPrivileged(name string, args ...string) ([]byte, error) {
-	if os.Geteuid() == 0 {
-		return exec.Command(name, args...).CombinedOutput()
-	}
-	all := append([]string{name}, args...)
-	return exec.Command("sudo", all...).CombinedOutput()
-}
-
-func commandExists(name string) bool {
-	_, err := exec.LookPath(name)
-	return err == nil
 }

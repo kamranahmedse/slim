@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/kamranahmedse/slim/internal/config"
-	"github.com/kamranahmedse/slim/internal/log"
+	"github.com/kamranahmedse/slim/internal/term"
 	"github.com/spf13/cobra"
 )
 
@@ -110,23 +110,23 @@ func formatLogLine(line string) string {
 		status := parts[2]
 		duration := parts[3]
 
-		statusColor := log.Green
+		statusColor := term.Green
 		if len(status) > 0 {
 			switch status[0] {
 			case '5':
-				statusColor = log.Red
+				statusColor = term.Red
 			case '4':
-				statusColor = log.Yellow
+				statusColor = term.Yellow
 			case '3':
-				statusColor = log.Cyan
+				statusColor = term.Cyan
 			}
 		}
 
 		return fmt.Sprintf("%s%s%s %s%s%s %s%s%s %s%s%s",
-			log.Dim, ts, log.Reset,
-			log.Magenta, domain, log.Reset,
-			statusColor, status, log.Reset,
-			log.Dim, duration, log.Reset,
+			term.Dim, ts, term.Reset,
+			term.Magenta, domain, term.Reset,
+			statusColor, status, term.Reset,
+			term.Dim, duration, term.Reset,
 		)
 	}
 
@@ -142,26 +142,26 @@ func formatLogLine(line string) string {
 	status := parts[5]
 	duration := parts[6]
 
-	statusColor := log.Green
+	statusColor := term.Green
 	if len(status) > 0 {
 		switch status[0] {
 		case '5':
-			statusColor = log.Red
+			statusColor = term.Red
 		case '4':
-			statusColor = log.Yellow
+			statusColor = term.Yellow
 		case '3':
-			statusColor = log.Cyan
+			statusColor = term.Cyan
 		}
 	}
 
 	return fmt.Sprintf("%s%s%s %s%s%s %s %s → %s:%s%s %s%s%s %s%s%s",
-		log.Dim, ts, log.Reset,
-		log.Magenta, domain, log.Reset,
+		term.Dim, ts, term.Reset,
+		term.Magenta, domain, term.Reset,
 		method,
 		path,
-		log.Dim, upstream, log.Reset,
-		statusColor, status, log.Reset,
-		log.Dim, duration, log.Reset,
+		term.Dim, upstream, term.Reset,
+		statusColor, status, term.Reset,
+		term.Dim, duration, term.Reset,
 	)
 }
 

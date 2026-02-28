@@ -6,16 +6,8 @@ import (
 	"os"
 	"sync"
 	"time"
-)
 
-const (
-	Reset   = "\033[0m"
-	Dim     = "\033[2m"
-	Green   = "\033[32m"
-	Yellow  = "\033[33m"
-	Red     = "\033[31m"
-	Cyan    = "\033[36m"
-	Magenta = "\033[35m"
+	"github.com/kamranahmedse/slim/internal/term"
 )
 
 const maxLogSize = 10 << 20 // 10 MB
@@ -73,19 +65,6 @@ func Close() {
 	shutdownWriterLocked()
 }
 
-func ColorForStatus(code int) string {
-	switch {
-	case code >= 500:
-		return Red
-	case code >= 400:
-		return Yellow
-	case code >= 300:
-		return Cyan
-	default:
-		return Green
-	}
-}
-
 func Request(domain string, method string, path string, upstream int, status int, duration time.Duration) {
 	mu.RLock()
 	mode := logMode
@@ -97,7 +76,7 @@ func Request(domain string, method string, path string, upstream int, status int
 	}
 
 	ts := time.Now().Format("15:04:05")
-	dur := formatDuration(duration)
+	dur := FormatDuration(duration)
 
 	line := fmt.Sprintf("%s\t%s\t%s\t%s\t%d\t%d\t%s\n",
 		ts, domain, method, path, upstream, status, dur)
@@ -112,14 +91,14 @@ func Request(domain string, method string, path string, upstream int, status int
 }
 
 func Info(format string, args ...interface{}) {
-	fmt.Printf("%s[slim]%s %s\n", Cyan, Reset, fmt.Sprintf(format, args...))
+	fmt.Printf("%s[slim]%s %s\n", term.Cyan, term.Reset, fmt.Sprintf(format, args...))
 }
 
 func Error(format string, args ...interface{}) {
-	fmt.Printf("%s[slim]%s %s\n", Red, Reset, fmt.Sprintf(format, args...))
+	fmt.Printf("%s[slim]%s %s\n", term.Red, term.Reset, fmt.Sprintf(format, args...))
 }
 
-func formatDuration(d time.Duration) string {
+func FormatDuration(d time.Duration) string {
 	if d < time.Millisecond {
 		return fmt.Sprintf("%dµs", d.Microseconds())
 	}

@@ -10,8 +10,10 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/kamranahmedse/slim/internal/auth"
 	"github.com/kamranahmedse/slim/internal/config"
 	"github.com/kamranahmedse/slim/internal/log"
+	"github.com/kamranahmedse/slim/internal/term"
 	"github.com/kamranahmedse/slim/internal/tunnel"
 	"github.com/spf13/cobra"
 )
@@ -53,7 +55,7 @@ var shareCmd = &cobra.Command{
 			return fmt.Errorf("invalid port %d: must be between 1 and 65535", port)
 		}
 
-		token, err := loadOrCreateToken()
+		token, err := auth.LoadOrCreateToken()
 		if err != nil {
 			return fmt.Errorf("loading tunnel token: %w", err)
 		}
@@ -88,13 +90,13 @@ var shareCmd = &cobra.Command{
 			Password:  password,
 			TTL:       shareTTL,
 			OnRequest: func(e tunnel.RequestEvent) {
-				statusColor := log.ColorForStatus(e.Status)
+				statusColor := term.ColorForStatus(e.Status)
 				fmt.Printf("  %s%s%s  %s%-4s%s %s  %s%d%s  %s%s%s\n",
-					log.Dim, time.Now().Format("15:04:05"), log.Reset,
+					term.Dim, time.Now().Format("15:04:05"), term.Reset,
 					"", e.Method, "",
 					e.Path,
-					statusColor, e.Status, log.Reset,
-					log.Dim, formatShareDuration(e.Duration), log.Reset,
+					statusColor, e.Status, term.Reset,
+					term.Dim, log.FormatDuration(e.Duration), term.Reset,
 				)
 			},
 		})
@@ -115,43 +117,6 @@ var shareCmd = &cobra.Command{
 		fmt.Println("\nDisconnected.")
 		return nil
 	},
-}
-
-func loadOrCreateToken() (string, error) {
-	tokenPath := config.TunnelTokenPath()
-
-	data, err := os.ReadFile(tokenPath)
-	if err == nil {
-		token := string(data)
-		if len(token) > 0 {
-			return token, nil
-		}
-	}
-
-	b := make([]byte, 32)
-	if _, err := rand.Read(b); err != nil {
-		return "", err
-	}
-	token := hex.EncodeToString(b)
-
-	if err := os.MkdirAll(config.Dir(), 0755); err != nil {
-		return "", err
-	}
-	if err := os.WriteFile(tokenPath, []byte(token), 0600); err != nil {
-		return "", err
-	}
-
-	return token, nil
-}
-
-func formatShareDuration(d time.Duration) string {
-	if d < time.Millisecond {
-		return fmt.Sprintf("%dµs", d.Microseconds())
-	}
-	if d < time.Second {
-		return fmt.Sprintf("%dms", d.Milliseconds())
-	}
-	return fmt.Sprintf("%.1fs", d.Seconds())
 }
 
 func init() {

@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/kamranahmedse/slim/internal/log"
-	proto "github.com/kamranahmedse/slim/tunnel"
+	proto "github.com/kamranahmedse/slim/protocol"
 	"nhooyr.io/websocket"
 	"nhooyr.io/websocket/wsjson"
 )

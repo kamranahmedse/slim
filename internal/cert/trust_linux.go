@@ -9,6 +9,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/kamranahmedse/slim/internal/osutil"
 )
 
 const (
@@ -19,9 +21,9 @@ const (
 
 var (
 	readCertFileFn          = os.ReadFile
-	commandExistsFn         = commandExists
+	commandExistsFn         = osutil.CommandExists
 	writeAnchorFileFn       = writeAnchorFile
-	runPrivilegedTrustFn    = runPrivileged
+	runPrivilegedTrustFn    = osutil.RunPrivileged
 	removeAnchorFileFn      = removeFilePrivileged
 	detectTrustAnchorPathFn = detectTrustAnchorPath
 )
@@ -105,7 +107,7 @@ func writeAnchorFile(path string, content []byte) error {
 		if !os.IsPermission(err) {
 			return fmt.Errorf("creating anchor directory %s: %w", parent, err)
 		}
-		if output, mkdirErr := runPrivileged("mkdir", "-p", parent); mkdirErr != nil {
+		if output, mkdirErr := osutil.RunPrivileged("mkdir", "-p", parent); mkdirErr != nil {
 			return fmt.Errorf("creating anchor directory %s: %s: %w", parent, strings.TrimSpace(string(output)), mkdirErr)
 		}
 	}
@@ -131,22 +133,9 @@ func removeFilePrivileged(path string) error {
 		return nil
 	}
 
-	output, err := runPrivileged("rm", "-f", path)
+	output, err := osutil.RunPrivileged("rm", "-f", path)
 	if err != nil {
 		return fmt.Errorf("removing %s: %s: %w", path, strings.TrimSpace(string(output)), err)
 	}
 	return nil
-}
-
-func runPrivileged(name string, args ...string) ([]byte, error) {
-	if os.Geteuid() == 0 {
-		return exec.Command(name, args...).CombinedOutput()
-	}
-	all := append([]string{name}, args...)
-	return exec.Command("sudo", all...).CombinedOutput()
-}
-
-func commandExists(name string) bool {
-	_, err := exec.LookPath(name)
-	return err == nil
 }
