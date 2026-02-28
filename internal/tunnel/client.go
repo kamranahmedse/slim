@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -115,6 +116,10 @@ func (c *Client) readLoop(ctx context.Context, conn *websocket.Conn) {
 
 			newConn, _, dialErr := c.dial(ctx)
 			if dialErr != nil {
+				if strings.Contains(dialErr.Error(), "registration failed:") {
+					log.Error("%v", dialErr)
+					return
+				}
 				log.Error("reconnect failed: %v", dialErr)
 				continue
 			}
