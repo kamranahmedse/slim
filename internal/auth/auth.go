@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/kamranahmedse/slim/internal/config"
+	"github.com/kamranahmedse/slim/internal/httperr"
 )
 
 const apiBase = "https://app.slim.sh"
@@ -25,12 +26,12 @@ type Info struct {
 func Login() (*Info, error) {
 	resp, err := http.Post(apiBase+"/api/auth/cli", "application/json", nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to start login: %w", err)
+		return nil, httperr.Wrap("failed to start login", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("server returned %d", resp.StatusCode)
+		return nil, fmt.Errorf("failed to start login: %w", httperr.FromResponse(resp))
 	}
 
 	var cliResp struct {
@@ -50,11 +51,19 @@ func Login() (*Info, error) {
 	client := &http.Client{Timeout: 5 * time.Second}
 	deadline := time.Now().Add(30 * time.Second)
 
+	var lastPollErr error
 	for time.Now().Before(deadline) {
 		time.Sleep(2 * time.Second)
 
 		pollResp, err := client.Get(fmt.Sprintf("%s/api/auth/cli/poll?code=%s", apiBase, cliResp.Code))
 		if err != nil {
+			lastPollErr = err
+			continue
+		}
+
+		if pollResp.StatusCode != http.StatusOK {
+			lastPollErr = httperr.FromResponse(pollResp)
+			pollResp.Body.Close()
 			continue
 		}
 
@@ -86,6 +95,10 @@ func Login() (*Info, error) {
 		return &auth, nil
 	}
 
+	if lastPollErr != nil {
+		return nil, httperr.Wrap("login failed", lastPollErr)
+	}
+
 	return nil, fmt.Errorf("login timed out — please try again")
 }
 
@@ -113,15 +126,15 @@ func LoadOrCreateToken() (string, error) {
 
 	b := make([]byte, 32)
 	if _, err := rand.Read(b); err != nil {
-		return "", err
+		return "", fmt.Errorf("generating tunnel token: %w", err)
 	}
 	token := hex.EncodeToString(b)
 
 	if err := os.MkdirAll(config.Dir(), 0755); err != nil {
-		return "", err
+		return "", fmt.Errorf("creating config dir: %w", err)
 	}
 	if err := os.WriteFile(tokenPath, []byte(token), 0600); err != nil {
-		return "", err
+		return "", fmt.Errorf("writing tunnel token: %w", err)
 	}
 
 	return token, nil

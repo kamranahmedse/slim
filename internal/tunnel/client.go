@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/kamranahmedse/slim/internal/httperr"
 	"github.com/kamranahmedse/slim/internal/log"
 	proto "github.com/kamranahmedse/slim/protocol"
 	"nhooyr.io/websocket"
@@ -53,7 +54,7 @@ func (c *Client) Connect(ctx context.Context) (string, error) {
 func (c *Client) dial(ctx context.Context) (*websocket.Conn, string, error) {
 	conn, _, err := websocket.Dial(ctx, c.opts.ServerURL, nil)
 	if err != nil {
-		return nil, "", fmt.Errorf("dialing tunnel server: %w", err)
+		return nil, "", httperr.Wrap("dialing tunnel server", err)
 	}
 
 	conn.SetReadLimit(10 << 20)

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/kamranahmedse/slim/internal/config"
+	"github.com/kamranahmedse/slim/internal/httperr"
 )
 
 type IPCServer struct {
@@ -65,7 +66,7 @@ func (s *IPCServer) Close() {
 func SendIPC(req Request) (*Response, error) {
 	conn, err := net.DialTimeout("unix", config.SocketPath(), 5*time.Second)
 	if err != nil {
-		return nil, fmt.Errorf("connecting to daemon: %w (is slim running?)", err)
+		return nil, httperr.Wrap("connecting to daemon (is slim running?)", err)
 	}
 	defer conn.Close()
 
