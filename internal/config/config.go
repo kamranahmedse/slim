@@ -21,7 +21,7 @@ const (
 	LogModeMinimal = "minimal"
 	LogModeOff     = "off"
 
-	TunnelServerURL = "wss://slim.sh/tunnel"
+	TunnelServerURL = "wss://app.slim.sh/tunnel"
 )
 
 type Domain struct {
