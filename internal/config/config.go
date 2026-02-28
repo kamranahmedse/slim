@@ -20,6 +20,8 @@ const (
 	LogModeFull    = "full"
 	LogModeMinimal = "minimal"
 	LogModeOff     = "off"
+
+	TunnelServerURL = "wss://slim.sh/tunnel"
 )
 
 type Domain struct {
@@ -61,6 +63,10 @@ func SocketPath() string {
 
 func PidPath() string {
 	return filepath.Join(Dir(), "slim.pid")
+}
+
+func TunnelTokenPath() string {
+	return filepath.Join(Dir(), "tunnel-token")
 }
 
 func ValidateDomain(name string, port int) error {
