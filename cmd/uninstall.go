@@ -53,6 +53,15 @@ var uninstallCmd = &cobra.Command{
 		os.RemoveAll(config.Dir())
 		fmt.Println("done")
 
+		fmt.Print("  Removing slim binary... ")
+		if exe, err := os.Executable(); err != nil {
+			fmt.Printf("skipped (%v)\n", err)
+		} else if err := os.Remove(exe); err != nil {
+			fmt.Printf("skipped (%v)\n", err)
+		} else {
+			fmt.Println("done")
+		}
+
 		fmt.Println("\nslim has been completely removed.")
 		return nil
 	},

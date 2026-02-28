@@ -3,6 +3,7 @@ package proxy
 import (
 	"fmt"
 	"net"
+	"sync"
 	"time"
 )
 
@@ -15,6 +16,23 @@ func CheckUpstream(port int) bool {
 	}
 	conn.Close()
 	return true
+}
+
+func CheckUpstreams(ports []int) []bool {
+	results := make([]bool, len(ports))
+	var wg sync.WaitGroup
+	sem := make(chan struct{}, 16)
+	for i, port := range ports {
+		wg.Add(1)
+		go func(idx int, p int) {
+			defer wg.Done()
+			sem <- struct{}{}
+			results[idx] = CheckUpstream(p)
+			<-sem
+		}(i, port)
+	}
+	wg.Wait()
+	return results
 }
 
 func WaitForUpstream(port int, timeout time.Duration) error {

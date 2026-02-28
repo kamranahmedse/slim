@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/kamranahmedse/slim/internal/log"
+	"github.com/kamranahmedse/slim/internal/term"
 )
 
 func TestFormatLogLineMinimal(t *testing.T) {
@@ -16,22 +16,22 @@ func TestFormatLogLineMinimal(t *testing.T) {
 		{
 			name:        "5xx status is red",
 			line:        "12:00:00\tmyapp.local\t500\t10ms",
-			colorPrefix: log.Red,
+			colorPrefix: term.Red,
 		},
 		{
 			name:        "4xx status is yellow",
 			line:        "12:00:00\tmyapp.local\t404\t10ms",
-			colorPrefix: log.Yellow,
+			colorPrefix: term.Yellow,
 		},
 		{
 			name:        "3xx status is cyan",
 			line:        "12:00:00\tmyapp.local\t301\t10ms",
-			colorPrefix: log.Cyan,
+			colorPrefix: term.Cyan,
 		},
 		{
 			name:        "2xx status is green",
 			line:        "12:00:00\tmyapp.local\t200\t10ms",
-			colorPrefix: log.Green,
+			colorPrefix: term.Green,
 		},
 	}
 

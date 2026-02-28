@@ -5,25 +5,6 @@ import (
 	"time"
 )
 
-func TestColorForStatus(t *testing.T) {
-	tests := []struct {
-		code int
-		want string
-	}{
-		{code: 200, want: Green},
-		{code: 302, want: Cyan},
-		{code: 404, want: Yellow},
-		{code: 500, want: Red},
-	}
-
-	for _, tt := range tests {
-		got := ColorForStatus(tt.code)
-		if got != tt.want {
-			t.Fatalf("ColorForStatus(%d) = %q, want %q", tt.code, got, tt.want)
-		}
-	}
-}
-
 func TestFormatDuration(t *testing.T) {
 	tests := []struct {
 		in   time.Duration
@@ -36,9 +17,9 @@ func TestFormatDuration(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		got := formatDuration(tt.in)
+		got := FormatDuration(tt.in)
 		if got != tt.want {
-			t.Fatalf("formatDuration(%v) = %q, want %q", tt.in, got, tt.want)
+			t.Fatalf("FormatDuration(%v) = %q, want %q", tt.in, got, tt.want)
 		}
 	}
 }

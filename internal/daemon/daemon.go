@@ -154,22 +154,12 @@ func handleStatus() Response {
 	}
 
 	domains := make([]DomainInfo, len(cfg.Domains))
-	health := make([]bool, len(cfg.Domains))
-
-	var wg sync.WaitGroup
-	sem := make(chan struct{}, 16)
+	ports := make([]int, len(cfg.Domains))
 	for i, d := range cfg.Domains {
 		domains[i] = DomainInfo{Name: d.Name, Port: d.Port}
-		wg.Add(1)
-		go func(idx int, port int) {
-			defer wg.Done()
-			sem <- struct{}{}
-			health[idx] = proxy.CheckUpstream(port)
-			<-sem
-		}(i, d.Port)
+		ports[i] = d.Port
 	}
-	wg.Wait()
-
+	health := proxy.CheckUpstreams(ports)
 	for i := range domains {
 		domains[i].Healthy = health[i]
 	}

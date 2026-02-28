@@ -4,13 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"sync"
 	"text/tabwriter"
 
 	"github.com/kamranahmedse/slim/internal/config"
 	"github.com/kamranahmedse/slim/internal/daemon"
-	"github.com/kamranahmedse/slim/internal/log"
 	"github.com/kamranahmedse/slim/internal/proxy"
+	"github.com/kamranahmedse/slim/internal/term"
 	"github.com/spf13/cobra"
 )
 
@@ -49,19 +48,11 @@ var listCmd = &cobra.Command{
 			entries[i] = e
 		}
 		if running {
-			health := make([]bool, len(cfg.Domains))
-			var wg sync.WaitGroup
-			sem := make(chan struct{}, 16)
+			ports := make([]int, len(cfg.Domains))
 			for i, d := range cfg.Domains {
-				wg.Add(1)
-				go func(idx int, port int) {
-					defer wg.Done()
-					sem <- struct{}{}
-					health[idx] = proxy.CheckUpstream(port)
-					<-sem
-				}(i, d.Port)
+				ports[i] = d.Port
 			}
-			wg.Wait()
+			health := proxy.CheckUpstreams(ports)
 			for i := range entries {
 				entries[i].Healthy = &health[i]
 			}
@@ -80,12 +71,12 @@ var listCmd = &cobra.Command{
 		fmt.Fprintln(w, "DOMAIN\tPORT\tSTATUS")
 
 		for _, e := range entries {
-			status := log.Dim + "-" + log.Reset
+			status := term.Dim + "-" + term.Reset
 			if e.Healthy != nil {
 				if *e.Healthy {
-					status = log.Green + "● reachable" + log.Reset
+					status = term.Green + "● reachable" + term.Reset
 				} else {
-					status = log.Red + "● unreachable" + log.Reset
+					status = term.Red + "● unreachable" + term.Reset
 				}
 			}
 			fmt.Fprintf(w, "%s\t%d\t%s\n", e.Domain, e.Port, status)

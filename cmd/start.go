@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"net"
 	"strings"
 	"time"
 
@@ -10,6 +9,7 @@ import (
 	"github.com/kamranahmedse/slim/internal/config"
 	"github.com/kamranahmedse/slim/internal/daemon"
 	"github.com/kamranahmedse/slim/internal/proxy"
+	"github.com/kamranahmedse/slim/internal/setup"
 	"github.com/kamranahmedse/slim/internal/system"
 	"github.com/spf13/cobra"
 )
@@ -43,7 +43,7 @@ Runs first-time setup automatically if needed.
 			}
 		}
 
-		if err := ensureSetup(); err != nil {
+		if err := setup.EnsureFirstRun(); err != nil {
 			return err
 		}
 
@@ -69,7 +69,7 @@ Runs first-time setup automatically if needed.
 		}
 
 		if !daemon.IsRunning() {
-			if err := ensureProxyPortsAvailable(); err != nil {
+			if err := setup.EnsureProxyPortsAvailable(); err != nil {
 				return err
 			}
 			if err := daemon.RunDetached(); err != nil {
@@ -104,51 +104,6 @@ func validateStartWaitFlags(timeoutChanged bool, wait bool, timeout time.Duratio
 	}
 	if wait && timeout <= 0 {
 		return fmt.Errorf("--timeout must be greater than 0")
-	}
-	return nil
-}
-
-func ensureSetup() error {
-	if !cert.CAExists() {
-		fmt.Print("First-time setup: generating root CA... ")
-		if err := cert.GenerateCA(); err != nil {
-			return err
-		}
-		fmt.Println("done")
-
-		fmt.Println("Trusting root CA (you may be prompted for your password)...")
-		if err := cert.TrustCA(); err != nil {
-			return fmt.Errorf("trusting CA: %w", err)
-		}
-	}
-
-	pf := system.NewPortForwarder()
-	if !pf.IsEnabled() {
-		fmt.Printf("Setting up port forwarding (80→%d, 443→%d)... ", config.ProxyHTTPPort, config.ProxyHTTPSPort)
-		if err := pf.Enable(); err != nil {
-			fmt.Printf("skipped (%v)\n", err)
-		} else {
-			fmt.Println("done")
-		}
-	}
-
-	return nil
-}
-
-func ensureProxyPortsAvailable() error {
-	return ensurePortsAvailable([]string{
-		fmt.Sprintf(":%d", config.ProxyHTTPPort),
-		fmt.Sprintf(":%d", config.ProxyHTTPSPort),
-	})
-}
-
-func ensurePortsAvailable(addrs []string) error {
-	for _, addr := range addrs {
-		ln, err := net.Listen("tcp", addr)
-		if err != nil {
-			return fmt.Errorf("proxy listener port %s is unavailable: %w (another local proxy/old daemon may already be running)", addr, err)
-		}
-		_ = ln.Close()
 	}
 	return nil
 }

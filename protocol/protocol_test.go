@@ -1,4 +1,4 @@
-package tunnel
+package protocol
 
 import (
 	"net/http"
