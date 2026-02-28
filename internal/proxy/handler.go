@@ -23,9 +23,7 @@ func buildHandler(s *Server) http.Handler {
 		host := normalizeHost(r.Host)
 		name, ok := localDomainFromHost(host)
 		if !ok {
-			w.Header().Set("Content-Type", "text/html; charset=utf-8")
-			w.WriteHeader(http.StatusNotFound)
-			fmt.Fprintf(w, notFoundPage, host)
+			http.NotFound(w, r)
 			return
 		}
 
@@ -33,9 +31,7 @@ func buildHandler(s *Server) http.Handler {
 		route, found := s.routes[name]
 		s.cfgMu.RUnlock()
 		if !found {
-			w.Header().Set("Content-Type", "text/html; charset=utf-8")
-			w.WriteHeader(http.StatusNotFound)
-			fmt.Fprintf(w, notFoundPage, host)
+			http.NotFound(w, r)
 			return
 		}
 
@@ -76,10 +72,12 @@ func newDomainProxy(port int, transport *http.Transport) *httputil.ReverseProxy 
 			pr.Out.Host = pr.In.Host
 		},
 		ErrorHandler: func(w http.ResponseWriter, r *http.Request, err error) {
-			host := normalizeHost(r.Host)
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
 			w.WriteHeader(http.StatusBadGateway)
-			fmt.Fprintf(w, upstreamDownPage, host, port, port)
+			_ = upstreamDownTmpl.Execute(w, upstreamDownData{
+				Host: normalizeHost(r.Host),
+				Port: port,
+			})
 		},
 	}
 }

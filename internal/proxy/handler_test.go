@@ -64,8 +64,8 @@ func TestBuildHandlerUnknownDomainReturnsNotFound(t *testing.T) {
 	if rr.Code != http.StatusNotFound {
 		t.Fatalf("expected %d, got %d", http.StatusNotFound, rr.Code)
 	}
-	if !strings.Contains(rr.Body.String(), "isn't configured") {
-		t.Fatalf("expected not-found page content, got %q", rr.Body.String())
+	if !strings.Contains(rr.Body.String(), "404") {
+		t.Fatalf("expected 404 response, got %q", rr.Body.String())
 	}
 }
 

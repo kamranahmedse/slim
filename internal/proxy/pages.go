@@ -1,45 +1,16 @@
 package proxy
 
-const notFoundPage = `<!DOCTYPE html>
-<html>
-<head><title>slim - Not Found</title>
-<style>
-  body { font-family: -apple-system, system-ui, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; background: #0a0a0a; color: #e5e5e5; }
-  .container { text-align: center; max-width: 480px; }
-  h1 { font-size: 1.5rem; font-weight: 600; }
-  p { color: #888; line-height: 1.6; }
-  code { background: #1a1a1a; padding: 2px 8px; border-radius: 4px; font-size: 0.9em; }
-</style>
-</head>
-<body>
-<div class="container">
-  <h1>%s</h1>
-  <p>This domain isn't configured in slim.<br>
-  Run <code>slim start &lt;name&gt; --port &lt;port&gt;</code> to set it up.</p>
-</div>
-</body>
-</html>`
+import (
+	_ "embed"
+	"html/template"
+)
 
-const upstreamDownPage = `<!DOCTYPE html>
-<html>
-<head><title>slim - Waiting for server</title>
-<meta http-equiv="refresh" content="2">
-<style>
-  body { font-family: -apple-system, system-ui, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; background: #0a0a0a; color: #e5e5e5; }
-  .container { text-align: center; max-width: 480px; }
-  h1 { font-size: 1.5rem; font-weight: 600; }
-  p { color: #888; line-height: 1.6; }
-  .spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid #333; border-top-color: #fff; border-radius: 50%%; animation: spin 0.8s linear infinite; margin-bottom: 1rem; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-</style>
-</head>
-<body>
-<div class="container">
-  <div class="spinner"></div>
-  <h1>Waiting for %s</h1>
-  <p>The dev server on port %d doesn't seem to be running.<br>
-  Start your server and this page will auto-refresh.</p>
-  <p style="font-size: 0.85em; color: #555">Expecting a server on localhost:%d</p>
-</div>
-</body>
-</html>`
+//go:embed upstream_down.html
+var upstreamDownHTML string
+
+var upstreamDownTmpl = template.Must(template.New("upstream_down").Parse(upstreamDownHTML))
+
+type upstreamDownData struct {
+	Host string
+	Port int
+}
