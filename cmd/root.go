@@ -21,6 +21,9 @@ mDNS for LAN access, and WebSocket passthrough for HMR.
   slim list                       # see what's running
   slim stop myapp                 # stop one domain
   slim stop                       # stop everything`,
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		cmd.SilenceUsage = true
+	},
 }
 
 var versionCmd = &cobra.Command{
