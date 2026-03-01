@@ -3,7 +3,9 @@
 package cert
 
 import (
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -65,6 +67,7 @@ func TestUntrustCAUsesExpectedSecurityCommand(t *testing.T) {
 	restore := snapshotTrustDarwinExecHook()
 	defer restore()
 	initTrustDarwinConfig(t)
+	createDummyCACert(t)
 
 	var got [][]string
 	execCommandDarwinFn = func(name string, args ...string) *exec.Cmd {
@@ -94,6 +97,8 @@ func TestUntrustCAUsesExpectedSecurityCommand(t *testing.T) {
 func TestUntrustCAErrorIncludesCommandOutput(t *testing.T) {
 	restore := snapshotTrustDarwinExecHook()
 	defer restore()
+	initTrustDarwinConfig(t)
+	createDummyCACert(t)
 
 	execCommandDarwinFn = func(name string, args ...string) *exec.Cmd {
 		return exec.Command("sh", "-c", "echo remove failed; exit 1")
@@ -121,5 +126,16 @@ func initTrustDarwinConfig(t *testing.T) {
 	t.Setenv("HOME", home)
 	if err := config.Init(); err != nil {
 		t.Fatalf("config.Init: %v", err)
+	}
+}
+
+func createDummyCACert(t *testing.T) {
+	t.Helper()
+	path := CACertPath()
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		t.Fatalf("creating CA dir: %v", err)
+	}
+	if err := os.WriteFile(path, []byte("dummy"), 0644); err != nil {
+		t.Fatalf("creating dummy CA cert: %v", err)
 	}
 }

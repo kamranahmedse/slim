@@ -34,11 +34,11 @@ func printReport(report doctor.Report) {
 func statusIcon(s doctor.Status) string {
 	switch s {
 	case doctor.Pass:
-		return term.Green + "✓" + term.Reset
+		return term.CheckMark
 	case doctor.Warn:
-		return term.Yellow + "!" + term.Reset
+		return term.WarnMark
 	case doctor.Fail:
-		return term.Red + "✗" + term.Reset
+		return term.CrossMark
 	default:
 		return "?"
 	}

@@ -46,7 +46,7 @@ func Execute() error {
 	rootCmd.SilenceErrors = true
 
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Fprintf(os.Stderr, "\n  %sError:%s %s\n\n", term.Red, term.Reset, err)
+		fmt.Fprintf(os.Stderr, "\n  %s %s\n\n", term.Red.Render("Error:"), err)
 		return err
 	}
 
@@ -78,18 +78,17 @@ func printServices(domains []config.Domain) {
 		}
 	}
 
-	check := term.Green + "✓" + term.Reset
-	arrow := term.Dim + "→" + term.Reset
+	arrow := term.Dim.Render("→")
 
 	for _, d := range domains {
 		url := fmt.Sprintf("https://%s.local", d.Name)
-		fmt.Printf("  %s %s%-*s%s  %s  %slocalhost:%d%s\n",
-			check, term.Green, maxLen, url, term.Reset,
-			arrow, term.Dim, d.Port, term.Reset)
+		fmt.Printf("  %s %s  %s  %s\n",
+			term.CheckMark, term.Green.Render(fmt.Sprintf("%-*s", maxLen, url)),
+			arrow, term.Dim.Render(fmt.Sprintf("localhost:%d", d.Port)))
 		for _, r := range d.Routes {
-			fmt.Printf("    %s%-*s%s  %s  %slocalhost:%d%s\n",
-				term.Green, maxLen, url+r.Path, term.Reset,
-				arrow, term.Dim, r.Port, term.Reset)
+			fmt.Printf("    %s  %s  %s\n",
+				term.Green.Render(fmt.Sprintf("%-*s", maxLen, url+r.Path)),
+				arrow, term.Dim.Render(fmt.Sprintf("localhost:%d", r.Port)))
 		}
 	}
 }

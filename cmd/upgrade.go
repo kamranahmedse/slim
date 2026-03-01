@@ -14,6 +14,7 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/kamranahmedse/slim/internal/term"
 	"github.com/spf13/cobra"
 )
 
@@ -54,32 +55,39 @@ var upgradeCmd = &cobra.Command{
 		filename := fmt.Sprintf("slim_%s_%s_%s.tar.gz", latest, runtime.GOOS, runtime.GOARCH)
 		archiveURL := fmt.Sprintf("https://github.com/%s/releases/download/%s/%s", repo, tag, filename)
 		checksumURL := fmt.Sprintf("https://github.com/%s/releases/download/%s/checksums.txt", repo, tag)
-
-		fmt.Printf("  %-23s", "Downloading archive... ")
 		archivePath := filepath.Join(tmpDir, filename)
-		if err := downloadFile(archiveURL, archivePath); err != nil {
-			return fmt.Errorf("failed to download archive: %w", err)
-		}
-		fmt.Println("done")
-
-		fmt.Printf("  %-23s", "Verifying checksum... ")
-		if err := verifyChecksum(checksumURL, archivePath, filename); err != nil {
-			return fmt.Errorf("checksum verification failed: %w", err)
-		}
-		fmt.Println("ok")
-
-		fmt.Printf("  %-23s", "Extracting... ")
 		binaryPath := filepath.Join(tmpDir, "slim")
-		if err := extractBinary(archivePath, binaryPath); err != nil {
-			return fmt.Errorf("failed to extract archive: %w", err)
-		}
-		fmt.Println("done")
 
-		fmt.Printf("  %-23s", "Replacing binary... ")
-		if err := replaceBinary(binaryPath, exe); err != nil {
+		err = term.RunSteps([]term.Step{
+			{
+				Name: "Downloading archive",
+				Run: func() (string, error) {
+					return "done", downloadFile(archiveURL, archivePath)
+				},
+			},
+			{
+				Name: "Verifying checksum",
+				Run: func() (string, error) {
+					return "ok", verifyChecksum(checksumURL, archivePath, filename)
+				},
+			},
+			{
+				Name: "Extracting",
+				Run: func() (string, error) {
+					return "done", extractBinary(archivePath, binaryPath)
+				},
+			},
+			{
+				Name:        "Replacing binary",
+				Interactive: true,
+				Run: func() (string, error) {
+					return "done", replaceBinary(binaryPath, exe)
+				},
+			},
+		})
+		if err != nil {
 			return err
 		}
-		fmt.Println("done")
 
 		fmt.Printf("\nUpgraded to %s\n", latest)
 		return nil

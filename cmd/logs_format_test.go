@@ -3,35 +3,33 @@ package cmd
 import (
 	"strings"
 	"testing"
-
-	"github.com/kamranahmedse/slim/internal/term"
 )
 
 func TestFormatLogLineMinimal(t *testing.T) {
 	tests := []struct {
-		name        string
-		line        string
-		colorPrefix string
+		name   string
+		line   string
+		status string
 	}{
 		{
-			name:        "5xx status is red",
-			line:        "12:00:00\tmyapp.local\t500\t10ms",
-			colorPrefix: term.Red,
+			name:   "5xx status",
+			line:   "12:00:00\tmyapp.local\t500\t10ms",
+			status: "500",
 		},
 		{
-			name:        "4xx status is yellow",
-			line:        "12:00:00\tmyapp.local\t404\t10ms",
-			colorPrefix: term.Yellow,
+			name:   "4xx status",
+			line:   "12:00:00\tmyapp.local\t404\t10ms",
+			status: "404",
 		},
 		{
-			name:        "3xx status is cyan",
-			line:        "12:00:00\tmyapp.local\t301\t10ms",
-			colorPrefix: term.Cyan,
+			name:   "3xx status",
+			line:   "12:00:00\tmyapp.local\t301\t10ms",
+			status: "301",
 		},
 		{
-			name:        "2xx status is green",
-			line:        "12:00:00\tmyapp.local\t200\t10ms",
-			colorPrefix: term.Green,
+			name:   "2xx status",
+			line:   "12:00:00\tmyapp.local\t200\t10ms",
+			status: "200",
 		},
 	}
 
@@ -41,8 +39,8 @@ func TestFormatLogLineMinimal(t *testing.T) {
 			if !strings.Contains(got, "myapp.local") {
 				t.Fatalf("expected domain in output, got: %q", got)
 			}
-			if !strings.Contains(got, tt.colorPrefix) {
-				t.Fatalf("expected status color %q in output, got: %q", tt.colorPrefix, got)
+			if !strings.Contains(got, tt.status) {
+				t.Fatalf("expected status %q in output, got: %q", tt.status, got)
 			}
 		})
 	}

@@ -89,11 +89,11 @@ func Request(domain string, method string, path string, upstream int, status int
 }
 
 func Info(format string, args ...interface{}) {
-	fmt.Printf("%s[slim]%s %s\n", term.Cyan, term.Reset, fmt.Sprintf(format, args...))
+	fmt.Printf("%s %s\n", term.Cyan.Render("[slim]"), fmt.Sprintf(format, args...))
 }
 
 func Error(format string, args ...interface{}) {
-	fmt.Printf("%s[slim]%s %s\n", term.Red, term.Reset, fmt.Sprintf(format, args...))
+	fmt.Printf("%s %s\n", term.Red.Render("[slim]"), fmt.Sprintf(format, args...))
 }
 
 func FormatDuration(d time.Duration) string {

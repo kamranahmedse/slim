@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
-	"text/tabwriter"
 	"time"
 
+	"charm.land/lipgloss/v2"
+	"charm.land/lipgloss/v2/table"
 	"github.com/kamranahmedse/slim/internal/auth"
 	"github.com/kamranahmedse/slim/internal/config"
 	"github.com/kamranahmedse/slim/internal/daemon"
@@ -136,45 +136,77 @@ var listCmd = &cobra.Command{
 			return nil
 		}
 
-		w := tabwriter.NewWriter(os.Stdout, 0, 4, 2, ' ', 0)
-
-			if len(domains) > 0 {
-			fmt.Fprintln(w, "DOMAIN\tPORT\tSTATUS")
+		if len(domains) > 0 {
+			var rows [][]string
 			for _, e := range domains {
-				status := term.Dim + "-" + term.Reset
+				status := term.Dim.Render("-")
 				if e.Healthy != nil {
 					if *e.Healthy {
-						status = term.Green + "● reachable" + term.Reset
+						status = term.Green.Render("● reachable")
 					} else {
-						status = term.Red + "● unreachable" + term.Reset
+						status = term.Red.Render("● unreachable")
 					}
 				}
-				fmt.Fprintf(w, "%s\t%d\t%s\n", e.Domain, e.Port, status)
+				rows = append(rows, []string{e.Domain, fmt.Sprintf("%d", e.Port), status})
 				for _, r := range e.Routes {
-					rStatus := term.Dim + "-" + term.Reset
+					rStatus := term.Dim.Render("-")
 					if r.Healthy != nil {
 						if *r.Healthy {
-							rStatus = term.Green + "● reachable" + term.Reset
+							rStatus = term.Green.Render("● reachable")
 						} else {
-							rStatus = term.Red + "● unreachable" + term.Reset
+							rStatus = term.Red.Render("● unreachable")
 						}
 					}
-					fmt.Fprintf(w, "  %s\t%d\t%s\n", r.Path, r.Port, rStatus)
+					rows = append(rows, []string{"  " + r.Path, fmt.Sprintf("%d", r.Port), rStatus})
 				}
 			}
+
+			t := table.New().
+				Headers("DOMAIN", "PORT", "STATUS").
+				Rows(rows...).
+				BorderTop(false).
+				BorderBottom(false).
+				BorderLeft(false).
+				BorderRight(false).
+				BorderColumn(false).
+				BorderHeader(false).
+				StyleFunc(func(row, col int) lipgloss.Style {
+					s := lipgloss.NewStyle().PaddingRight(2)
+					if row == table.HeaderRow {
+						s = s.Bold(true).Faint(true)
+					}
+					return s
+				})
+			fmt.Println(t)
 		}
 
 		if len(tunnels) > 0 {
 			if len(domains) > 0 {
-				fmt.Fprintln(w)
+				fmt.Println()
 			}
-			fmt.Fprintln(w, "TUNNEL\tURL\tREQUESTS")
+			var rows [][]string
 			for _, t := range tunnels {
-				fmt.Fprintf(w, "%s\t%s\t%d\n", t.Subdomain+".slim.show", t.URL, t.RequestCount)
+				rows = append(rows, []string{t.Subdomain + ".slim.show", t.URL, fmt.Sprintf("%d", t.RequestCount)})
 			}
-		}
 
-		w.Flush()
+			t := table.New().
+				Headers("TUNNEL", "URL", "REQUESTS").
+				Rows(rows...).
+				BorderTop(false).
+				BorderBottom(false).
+				BorderLeft(false).
+				BorderRight(false).
+				BorderColumn(false).
+				BorderHeader(false).
+				StyleFunc(func(row, col int) lipgloss.Style {
+					s := lipgloss.NewStyle().PaddingRight(2)
+					if row == table.HeaderRow {
+						s = s.Bold(true).Faint(true)
+					}
+					return s
+				})
+			fmt.Println(t)
+		}
 
 		if len(domains) > 0 && !running {
 			fmt.Println("\nProxy is not running. Use 'slim start' to start it.")

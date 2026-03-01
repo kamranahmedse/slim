@@ -71,13 +71,13 @@ var shareCmd = &cobra.Command{
 			Password:  password,
 			TTL:       shareTTL,
 			OnRequest: func(e tunnel.RequestEvent) {
-				statusColor := term.ColorForStatus(e.Status)
-				fmt.Printf("  %s%s%s  %s%-4s%s %s  %s%d%s  %s%s%s\n",
-					term.Dim, time.Now().Format("15:04:05"), term.Reset,
-					"", e.Method, "",
+				statusStyle := term.StyleForStatus(e.Status)
+				fmt.Printf("  %s  %-4s %s  %s  %s\n",
+					term.Dim.Render(time.Now().Format("15:04:05")),
+					e.Method,
 					e.Path,
-					statusColor, e.Status, term.Reset,
-					term.Dim, log.FormatDuration(e.Duration), term.Reset,
+					statusStyle.Render(fmt.Sprintf("%d", e.Status)),
+					term.Dim.Render(log.FormatDuration(e.Duration)),
 				)
 			},
 		})

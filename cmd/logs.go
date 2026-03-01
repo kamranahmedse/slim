@@ -110,23 +110,23 @@ func formatLogLine(line string) string {
 		status := parts[2]
 		duration := parts[3]
 
-		statusColor := term.Green
+		statusStyle := term.Green
 		if len(status) > 0 {
 			switch status[0] {
 			case '5':
-				statusColor = term.Red
+				statusStyle = term.Red
 			case '4':
-				statusColor = term.Yellow
+				statusStyle = term.Yellow
 			case '3':
-				statusColor = term.Cyan
+				statusStyle = term.Cyan
 			}
 		}
 
-		return fmt.Sprintf("%s%s%s %s%s%s %s%s%s %s%s%s",
-			term.Dim, ts, term.Reset,
-			term.Magenta, domain, term.Reset,
-			statusColor, status, term.Reset,
-			term.Dim, duration, term.Reset,
+		return fmt.Sprintf("%s %s %s %s",
+			term.Dim.Render(ts),
+			term.Magenta.Render(domain),
+			statusStyle.Render(status),
+			term.Dim.Render(duration),
 		)
 	}
 
@@ -142,26 +142,26 @@ func formatLogLine(line string) string {
 	status := parts[5]
 	duration := parts[6]
 
-	statusColor := term.Green
+	statusStyle := term.Green
 	if len(status) > 0 {
 		switch status[0] {
 		case '5':
-			statusColor = term.Red
+			statusStyle = term.Red
 		case '4':
-			statusColor = term.Yellow
+			statusStyle = term.Yellow
 		case '3':
-			statusColor = term.Cyan
+			statusStyle = term.Cyan
 		}
 	}
 
-	return fmt.Sprintf("%s%s%s %s%s%s %s %s → %s:%s%s %s%s%s %s%s%s",
-		term.Dim, ts, term.Reset,
-		term.Magenta, domain, term.Reset,
+	return fmt.Sprintf("%s %s %s %s → %s %s %s",
+		term.Dim.Render(ts),
+		term.Magenta.Render(domain),
 		method,
 		path,
-		term.Dim, upstream, term.Reset,
-		statusColor, status, term.Reset,
-		term.Dim, duration, term.Reset,
+		term.Dim.Render(upstream),
+		statusStyle.Render(status),
+		term.Dim.Render(duration),
 	)
 }
 
