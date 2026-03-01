@@ -24,33 +24,17 @@ var sharePassword bool
 var shareTTL time.Duration
 
 var shareCmd = &cobra.Command{
-	Use:   "share [name]",
+	Use:   "share",
 	Short: "Share a local port via tunnel",
 	Long: `Expose a local dev server to the internet via a slim.sh tunnel.
 
-  slim share myapp --port 3000
-  slim share myapp --port 3000 --subdomain cool
-  slim share myapp --port 3000 --password
-  slim share myapp --port 3000 --ttl 2h`,
-	Args: cobra.ExactArgs(1),
+  slim share --port 3000
+  slim share --port 3000 --subdomain cool
+  slim share --port 3000 --password
+  slim share --port 3000 --ttl 30m`,
+	Args: cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		name := normalizeName(args[0])
-
 		port := sharePort
-		if port == 0 {
-			cfg, err := config.Load()
-			if err != nil {
-				return err
-			}
-			if d, _ := cfg.FindDomain(name); d != nil {
-				port = d.Port
-			}
-		}
-
-		if port == 0 {
-			return fmt.Errorf("port is required (use --port or start the domain first with 'slim start')")
-		}
-
 		if port < 1 || port > 65535 {
 			return fmt.Errorf("invalid port %d: must be between 1 and 65535", port)
 		}
@@ -70,9 +54,6 @@ var shareCmd = &cobra.Command{
 		}
 
 		subdomain := shareName
-		if subdomain == "" {
-			subdomain = name
-		}
 
 		password := ""
 		if sharePassword {
@@ -125,8 +106,9 @@ var shareCmd = &cobra.Command{
 
 func init() {
 	shareCmd.Flags().IntVarP(&sharePort, "port", "p", 0, "Local port to expose")
+	shareCmd.MarkFlagRequired("port")
 	shareCmd.Flags().StringVar(&shareName, "subdomain", "", "Vanity subdomain name")
 	shareCmd.Flags().BoolVar(&sharePassword, "password", false, "Require password (auto-generated)")
-	shareCmd.Flags().DurationVar(&shareTTL, "ttl", 8*time.Hour, "Tunnel time-to-live")
+	shareCmd.Flags().DurationVar(&shareTTL, "ttl", 1*time.Hour, "Tunnel time-to-live (max 1h)")
 	rootCmd.AddCommand(shareCmd)
 }

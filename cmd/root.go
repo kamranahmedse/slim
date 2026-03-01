@@ -2,9 +2,11 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/kamranahmedse/slim/internal/config"
+	"github.com/kamranahmedse/slim/internal/term"
 	"github.com/spf13/cobra"
 )
 
@@ -41,7 +43,14 @@ func Execute() error {
 		return err
 	}
 	rootCmd.CompletionOptions.DisableDefaultCmd = true
-	return rootCmd.Execute()
+	rootCmd.SilenceErrors = true
+
+	if err := rootCmd.Execute(); err != nil {
+		fmt.Fprintf(os.Stderr, "\n  %sError:%s %s\n\n", term.Red, term.Reset, err)
+		return err
+	}
+
+	return nil
 }
 
 func init() {
