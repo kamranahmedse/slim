@@ -24,7 +24,6 @@ var upgradeCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		repo := "kamranahmedse/slim"
 
-		fmt.Print("Checking for updates... ")
 		tag, err := latestTag(repo)
 		if err != nil {
 			return fmt.Errorf("failed to check latest version: %w", err)
@@ -32,10 +31,10 @@ var upgradeCmd = &cobra.Command{
 		latest := strings.TrimPrefix(tag, "v")
 
 		if latest == Version {
-			fmt.Printf("already up to date (%s)\n", Version)
+			fmt.Printf("\nAlready up to date (%s)\n\n", Version)
 			return nil
 		}
-		fmt.Printf("found %s (current: %s)\n", latest, Version)
+		fmt.Printf("\nUpdating %s → %s\n\n", Version, latest)
 
 		exe, err := os.Executable()
 		if err != nil {
@@ -56,33 +55,33 @@ var upgradeCmd = &cobra.Command{
 		archiveURL := fmt.Sprintf("https://github.com/%s/releases/download/%s/%s", repo, tag, filename)
 		checksumURL := fmt.Sprintf("https://github.com/%s/releases/download/%s/checksums.txt", repo, tag)
 
-		fmt.Print("Downloading archive... ")
+		fmt.Print("  Downloading archive... ")
 		archivePath := filepath.Join(tmpDir, filename)
 		if err := downloadFile(archiveURL, archivePath); err != nil {
 			return fmt.Errorf("failed to download archive: %w", err)
 		}
 		fmt.Println("done")
 
-		fmt.Print("Verifying checksum... ")
+		fmt.Print("  Verifying checksum... ")
 		if err := verifyChecksum(checksumURL, archivePath, filename); err != nil {
 			return fmt.Errorf("checksum verification failed: %w", err)
 		}
 		fmt.Println("ok")
 
-		fmt.Print("Extracting... ")
+		fmt.Print("  Extracting... ")
 		binaryPath := filepath.Join(tmpDir, "slim")
 		if err := extractBinary(archivePath, binaryPath); err != nil {
 			return fmt.Errorf("failed to extract archive: %w", err)
 		}
 		fmt.Println("done")
 
-		fmt.Print("Replacing binary... ")
+		fmt.Print("  Replacing binary... ")
 		if err := replaceBinary(binaryPath, exe); err != nil {
 			return err
 		}
 		fmt.Println("done")
 
-		fmt.Printf("\nUpgraded slim to %s\n", latest)
+		fmt.Printf("\nUpgraded to %s\n", latest)
 		return nil
 	},
 }
