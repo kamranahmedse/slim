@@ -24,16 +24,16 @@ func RunSteps(steps []Step) error {
 
 func runStep(s Step) error {
 	if s.Interactive {
-		fmt.Printf("  %s... ", s.Name)
+		fmt.Println(Dim.Render("  · " + s.Name))
 		result, err := s.Run()
 		if err != nil {
-			fmt.Println(CrossMark)
+			fmt.Printf("  %s %s\n", CrossMark, s.Name)
 			return err
 		}
 		if strings.HasPrefix(result, "skipped") {
-			fmt.Printf("%s (%s)\n", WarnMark, result)
+			fmt.Printf("  %s %s (%s)\n", WarnMark, s.Name, result)
 		} else {
-			fmt.Println(CheckMark)
+			fmt.Printf("  %s %s\n", CheckMark, s.Name)
 		}
 		return nil
 	}
