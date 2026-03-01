@@ -55,27 +55,27 @@ var upgradeCmd = &cobra.Command{
 		archiveURL := fmt.Sprintf("https://github.com/%s/releases/download/%s/%s", repo, tag, filename)
 		checksumURL := fmt.Sprintf("https://github.com/%s/releases/download/%s/checksums.txt", repo, tag)
 
-		fmt.Print("  Downloading archive... ")
+		fmt.Printf("  %-23s", "Downloading archive... ")
 		archivePath := filepath.Join(tmpDir, filename)
 		if err := downloadFile(archiveURL, archivePath); err != nil {
 			return fmt.Errorf("failed to download archive: %w", err)
 		}
 		fmt.Println("done")
 
-		fmt.Print("  Verifying checksum... ")
+		fmt.Printf("  %-23s", "Verifying checksum... ")
 		if err := verifyChecksum(checksumURL, archivePath, filename); err != nil {
 			return fmt.Errorf("checksum verification failed: %w", err)
 		}
 		fmt.Println("ok")
 
-		fmt.Print("  Extracting... ")
+		fmt.Printf("  %-23s", "Extracting... ")
 		binaryPath := filepath.Join(tmpDir, "slim")
 		if err := extractBinary(archivePath, binaryPath); err != nil {
 			return fmt.Errorf("failed to extract archive: %w", err)
 		}
 		fmt.Println("done")
 
-		fmt.Print("  Replacing binary... ")
+		fmt.Printf("  %-23s", "Replacing binary... ")
 		if err := replaceBinary(binaryPath, exe); err != nil {
 			return err
 		}
