@@ -59,7 +59,7 @@ First run handles all setup automatically (CA generation, keychain trust, port f
 ```bash
 # Start proxying domains
 slim start myapp --port 3000
-slim start api -p 8080
+slim start api --port 8080
 
 # Route different paths to different upstream ports
 slim start myapp --port 3000 --route /api=8080 --route /ws=9000
@@ -70,10 +70,10 @@ slim up --config /path/to/.slim.yaml
 
 # Optional start flags
 # Access logs: full | minimal | off
-slim start myapp -p 3000 --log-mode minimal
+slim start myapp --port 3000 --log-mode minimal
 
 # Wait for upstream readiness before returning
-slim start myapp -p 3000 --wait --timeout 30s
+slim start myapp --port 3000 --wait --timeout 30s
 
 # Inspect running domains
 slim list
@@ -81,7 +81,7 @@ slim list --json
 
 # Access logs with or without tail
 slim logs
-slim logs -f myapp
+slim logs --follow myapp
 slim logs --flush
 
 # Run diagnostic checks
