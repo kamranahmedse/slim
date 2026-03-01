@@ -15,8 +15,6 @@ import (
 	"github.com/kamranahmedse/slim/internal/httperr"
 )
 
-const apiBase = "https://app.slim.sh"
-
 type Info struct {
 	Token string `json:"token"`
 	Name  string `json:"name"`
@@ -37,7 +35,7 @@ func Login() (*Info, error) {
 }
 
 func validateToken(token string) bool {
-	req, err := http.NewRequest("GET", apiBase+"/api/me", nil)
+	req, err := http.NewRequest("GET", config.APIBaseURL()+"/api/me", nil)
 	if err != nil {
 		return false
 	}
@@ -54,7 +52,7 @@ func validateToken(token string) bool {
 }
 
 func startOAuthLogin() (*Info, error) {
-	resp, err := http.Post(apiBase+"/api/auth/cli", "application/json", nil)
+	resp, err := http.Post(config.APIBaseURL()+"/api/auth/cli", "application/json", nil)
 	if err != nil {
 		return nil, httperr.Wrap("failed to start login", err)
 	}
@@ -89,7 +87,7 @@ func pollForCompletion(code string) (*Info, error) {
 	for time.Now().Before(deadline) {
 		time.Sleep(2 * time.Second)
 
-		pollResp, err := client.Get(fmt.Sprintf("%s/api/auth/cli/poll?code=%s", apiBase, code))
+		pollResp, err := client.Get(fmt.Sprintf("%s/api/auth/cli/poll?code=%s", config.APIBaseURL(), code))
 		if err != nil {
 			lastPollErr = err
 			continue

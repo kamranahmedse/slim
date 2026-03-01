@@ -3,10 +3,10 @@ package cmd
 import (
 	"fmt"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/kamranahmedse/slim/internal/auth"
+	"github.com/kamranahmedse/slim/internal/config"
 	"github.com/spf13/cobra"
 )
 
@@ -34,13 +34,8 @@ var logoutCmd = &cobra.Command{
 }
 
 func revokeToken(token string) {
-	serverURL := os.Getenv("SLIM_TUNNEL_SERVER_API")
-	if serverURL == "" {
-		serverURL = "https://app.slim.sh"
-	}
-
 	client := &http.Client{Timeout: 5 * time.Second}
-	req, err := http.NewRequest("DELETE", serverURL+"/api/auth/token", nil)
+	req, err := http.NewRequest("DELETE", config.APIBaseURL()+"/api/auth/token", nil)
 	if err != nil {
 		return
 	}

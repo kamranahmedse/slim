@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
-	"os"
 	"os/signal"
 	"syscall"
 	"time"
@@ -48,10 +47,7 @@ var shareCmd = &cobra.Command{
 		}
 		token := info.Token
 
-		serverURL := os.Getenv("SLIM_TUNNEL_SERVER")
-		if serverURL == "" {
-			serverURL = config.TunnelServerURL
-		}
+		serverURL := config.TunnelServerURL()
 
 		subdomain := shareName
 

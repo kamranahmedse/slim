@@ -10,8 +10,23 @@ const (
 	ProxyHTTPPort  = 10080
 	ProxyHTTPSPort = 10443
 
-	TunnelServerURL = "wss://app.slim.sh/tunnel"
+	defaultAPIBase      = "https://app.slim.sh"
+	defaultTunnelServer = "wss://app.slim.sh/tunnel"
 )
+
+func APIBaseURL() string {
+	if v := os.Getenv("SLIM_TUNNEL_SERVER_API"); v != "" {
+		return v
+	}
+	return defaultAPIBase
+}
+
+func TunnelServerURL() string {
+	if v := os.Getenv("SLIM_TUNNEL_SERVER"); v != "" {
+		return v
+	}
+	return defaultTunnelServer
+}
 
 var baseDir string
 

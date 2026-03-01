@@ -28,13 +28,8 @@ type activeTunnel struct {
 }
 
 func fetchActiveTunnels(token string) []activeTunnel {
-	serverURL := os.Getenv("SLIM_TUNNEL_SERVER_API")
-	if serverURL == "" {
-		serverURL = "https://app.slim.sh"
-	}
-
 	client := &http.Client{Timeout: 5 * time.Second}
-	req, err := http.NewRequest("GET", serverURL+"/api/tunnels/active", nil)
+	req, err := http.NewRequest("GET", config.APIBaseURL()+"/api/tunnels/active", nil)
 	if err != nil {
 		return nil
 	}
