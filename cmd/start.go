@@ -106,10 +106,7 @@ Runs first-time setup automatically if needed.
 			}
 		}
 
-		fmt.Printf("https://%s.local → localhost:%d\n", name, startPort)
-		for _, r := range routes {
-			fmt.Printf("  %s → localhost:%d\n", r.Path, r.Port)
-		}
+		printServices([]config.Domain{{Name: name, Port: startPort, Routes: routes}})
 		return nil
 	},
 }

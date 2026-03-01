@@ -27,16 +27,28 @@ var (
 	upDaemonSendIPCFn     = daemon.SendIPC
 )
 
+var upConfigPath string
+
 var upCmd = &cobra.Command{
 	Use:   "up",
 	Short: "Start all services from .slim.yaml",
 	Long: `Discover .slim.yaml in the current or parent directories,
 then start all services defined in it.
 
-  slim up`,
+  slim up
+  slim up --config /path/to/.slim.yaml`,
 	Args: cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		pc, path, err := upDiscoverFn()
+		var pc *project.ProjectConfig
+		var path string
+		var err error
+
+		if upConfigPath != "" {
+			path = upConfigPath
+			pc, err = project.Load(path)
+		} else {
+			pc, path, err = upDiscoverFn()
+		}
 		if err != nil {
 			return err
 		}
@@ -101,17 +113,17 @@ then start all services defined in it.
 			}
 		}
 
-		for _, svc := range pc.Services {
-			fmt.Printf("https://%s.local → localhost:%d\n", svc.Domain, svc.Port)
-			for _, r := range svc.Routes {
-				fmt.Printf("  %s → localhost:%d\n", r.Path, r.Port)
-			}
+		domains := make([]config.Domain, len(pc.Services))
+		for i, svc := range pc.Services {
+			domains[i] = config.Domain{Name: svc.Domain, Port: svc.Port, Routes: svc.Routes}
 		}
+		printServices(domains)
 
 		return nil
 	},
 }
 
 func init() {
+	upCmd.Flags().StringVarP(&upConfigPath, "config", "c", "", "Path to .slim.yaml")
 	rootCmd.AddCommand(upCmd)
 }
