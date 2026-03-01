@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -40,7 +41,7 @@ func RunDetached() error {
 		PidFileName: "",
 		PidFilePerm: 0644,
 		LogFileName: "",
-		WorkDir:     config.Dir(),
+		WorkDir:     "./",
 		Umask:       027,
 	}
 
@@ -54,15 +55,27 @@ func RunDetached() error {
 	}
 
 	defer daemonCtx.Release()
-	return run()
+	if err := run(); err != nil {
+		errPath := config.Dir() + "/daemon.err"
+		_ = os.WriteFile(errPath, []byte(err.Error()+"\n"), 0644)
+		os.Exit(1)
+	}
+	return nil
 }
 
 func WaitForDaemon() error {
+	errPath := config.Dir() + "/daemon.err"
+	os.Truncate(errPath, 0)
+
 	for i := 0; i < 50; i++ {
 		if IsRunning() {
 			return nil
 		}
 		time.Sleep(100 * time.Millisecond)
+	}
+
+	if data, err := os.ReadFile(errPath); err == nil && len(data) > 0 {
+		return fmt.Errorf("daemon failed to start: %s", strings.TrimSpace(string(data)))
 	}
 	return fmt.Errorf("daemon failed to start within 5 seconds")
 }
@@ -89,7 +102,6 @@ func run() error {
 			log.Error("mDNS registration failed for %s: %v", d.Name, err)
 		}
 	}
-
 	ipc, err := NewIPCServer(func(req Request) Response {
 		return handleIPC(req, srv, responder)
 	})
