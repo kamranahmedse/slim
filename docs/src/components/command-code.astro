@@ -1,6 +1,6 @@
 ---
 const props = Astro.props;
-const { code } = props;
+const { code, lang } = props;
 
 const commandBins = new Set(['slim', 'curl', 'sh']);
 const flagPattern = /^--?[a-z0-9][\w-]*$/i;
@@ -72,9 +72,69 @@ const highlightCommand = (commandLine) => {
     .join('');
 };
 
+const highlightYamlLine = (line) => {
+  if (!line.trim()) {
+    return '';
+  }
+
+  if (line.trimStart().startsWith('#')) {
+    return `<span class="token-comment">${escapeHtml(line)}</span>`;
+  }
+
+  const leading = line.match(/^(\s*)/)[1];
+  const rest = line.slice(leading.length);
+
+  // List item: "- key: value" or "- value"
+  const listMatch = rest.match(/^(-\s+)(.*)$/);
+  if (listMatch) {
+    const dash = listMatch[1];
+    const after = listMatch[2];
+    const kvMatch = after.match(/^([a-zA-Z_][\w-]*)(:\s*)(.+)$/);
+    if (kvMatch) {
+      return `${escapeHtml(leading)}<span class="token-muted">${escapeHtml(dash)}</span><span class="token-yaml-key">${escapeHtml(kvMatch[1])}</span><span class="token-muted">${escapeHtml(kvMatch[2])}</span><span class="token-yaml-value">${escapeHtml(kvMatch[3])}</span>`;
+    }
+    return `${escapeHtml(leading)}<span class="token-muted">${escapeHtml(dash)}</span><span class="token-yaml-value">${escapeHtml(after)}</span>`;
+  }
+
+  // Key: value
+  const kvMatch = rest.match(/^([a-zA-Z_][\w-]*)(:\s*)(.+)$/);
+  if (kvMatch) {
+    return `${escapeHtml(leading)}<span class="token-yaml-key">${escapeHtml(kvMatch[1])}</span><span class="token-muted">${escapeHtml(kvMatch[2])}</span><span class="token-yaml-value">${escapeHtml(kvMatch[3])}</span>`;
+  }
+
+  // Key: (no value, section heading)
+  const sectionMatch = rest.match(/^([a-zA-Z_][\w-]*)(:\s*)$/);
+  if (sectionMatch) {
+    return `${escapeHtml(leading)}<span class="token-yaml-key">${escapeHtml(sectionMatch[1])}</span><span class="token-muted">${escapeHtml(sectionMatch[2])}</span>`;
+  }
+
+  return `<span class="token-text">${escapeHtml(line)}</span>`;
+};
+
+const isYaml = lang === 'yaml';
+
+const detectAutoYaml = (lines) => {
+  if (isYaml) { return true; }
+  let hasShell = false;
+  let hasYaml = false;
+  for (const l of lines) {
+    const trimmed = l.trim();
+    if (trimmed.startsWith('$ ')) { hasShell = true; }
+    if (/^[a-zA-Z_][\w-]*:/.test(trimmed) && !trimmed.startsWith('#') && !trimmed.startsWith('$')) { hasYaml = true; }
+  }
+  return hasYaml && !hasShell;
+};
+
+const lines = code.split('\n');
+const autoYaml = detectAutoYaml(lines);
+
 const highlightLine = (line) => {
   if (!line.trim()) {
     return '';
+  }
+
+  if (autoYaml) {
+    return highlightYamlLine(line);
   }
 
   if (line.startsWith('#')) {
@@ -89,7 +149,7 @@ const highlightLine = (line) => {
   return `<span class="token-text">${escapeHtml(line)}</span>`;
 };
 
-const highlightedCode = code.split('\n').map(highlightLine).join('\n');
+const highlightedCode = lines.map(highlightLine).join('\n');
 ---
 
 <div class="command-code-wrapper">
@@ -146,5 +206,13 @@ const highlightedCode = code.split('\n').map(highlightLine).join('\n');
 
   .command-code-wrapper :global(.token-text) {
     color: #e5e5e5;
+  }
+
+  .command-code-wrapper :global(.token-yaml-key) {
+    color: #7dd3fc;
+  }
+
+  .command-code-wrapper :global(.token-yaml-value) {
+    color: #fbbf24;
   }
 </style>

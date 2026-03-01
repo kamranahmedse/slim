@@ -19,14 +19,45 @@ const (
 	LogModeOff     = "off"
 )
 
-type Domain struct {
-	Name string `yaml:"name"`
+type Route struct {
+	Path string `yaml:"path"`
 	Port int    `yaml:"port"`
+}
+
+type Domain struct {
+	Name   string  `yaml:"name"`
+	Port   int     `yaml:"port"`
+	Routes []Route `yaml:"routes,omitempty"`
 }
 
 type Config struct {
 	Domains []Domain `yaml:"domains"`
 	LogMode string   `yaml:"log_mode,omitempty"`
+}
+
+func ValidateRoute(path string, port int) error {
+	if path == "" || path[0] != '/' {
+		return fmt.Errorf("route path must start with /")
+	}
+	if port < 1 || port > 65535 {
+		return fmt.Errorf("invalid route port %d: must be between 1 and 65535", port)
+	}
+	return nil
+}
+
+func (d *Domain) MatchRoute(reqPath string) int {
+	bestLen := 0
+	bestPort := d.Port
+	for _, r := range d.Routes {
+		if len(r.Path) <= bestLen {
+			continue
+		}
+		if reqPath == r.Path || (strings.HasPrefix(reqPath, r.Path) && (r.Path[len(r.Path)-1] == '/' || (len(reqPath) > len(r.Path) && reqPath[len(r.Path)] == '/'))) {
+			bestLen = len(r.Path)
+			bestPort = r.Port
+		}
+	}
+	return bestPort
 }
 
 func ValidateDomain(name string, port int) error {
@@ -104,12 +135,13 @@ func (c *Config) FindDomain(name string) (*Domain, int) {
 	return nil, -1
 }
 
-func (c *Config) SetDomain(name string, port int) error {
+func (c *Config) SetDomain(name string, port int, routes []Route) error {
 	if existing, idx := c.FindDomain(name); existing != nil {
 		c.Domains[idx].Port = port
+		c.Domains[idx].Routes = routes
 		return c.Save()
 	}
-	c.Domains = append(c.Domains, Domain{Name: name, Port: port})
+	c.Domains = append(c.Domains, Domain{Name: name, Port: port, Routes: routes})
 	return c.Save()
 }
 

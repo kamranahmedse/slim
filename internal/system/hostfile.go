@@ -23,7 +23,7 @@ func AddHost(name string) error {
 		return fmt.Errorf("reading hosts file: %w", err)
 	}
 
-	if hasMarkedEntry(string(content), hostname) {
+	if HasMarkedEntry(string(content), hostname) {
 		return nil
 	}
 
@@ -69,7 +69,7 @@ func RemoveAllHosts() error {
 	return writeFileElevatedHostFn(hostsPath, strings.Join(filtered, "\n"))
 }
 
-func hasMarkedEntry(content, hostname string) bool {
+func HasMarkedEntry(content, hostname string) bool {
 	for _, line := range strings.Split(content, "\n") {
 		if lineHasHost(line, hostname) && strings.Contains(line, marker) {
 			return true

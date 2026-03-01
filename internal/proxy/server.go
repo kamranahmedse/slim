@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"sort"
 	"sync"
 	"time"
 
@@ -27,7 +28,7 @@ var (
 type Server struct {
 	cfg           *config.Config
 	cfgMu         sync.RWMutex
-	routes        map[string]*domainRoute
+	routes        map[string]*domainRouter
 	knownDomains  map[string]struct{}
 	defaultDomain string
 	httpAddr      string
@@ -46,7 +47,7 @@ func NewServer(cfg *config.Config) *Server {
 		httpAddr:     HTTPAddr,
 		httpsAddr:    HTTPSAddr,
 		transport:    newUpstreamTransport(),
-		routes:       make(map[string]*domainRoute),
+		routes:       make(map[string]*domainRouter),
 		knownDomains: make(map[string]struct{}),
 		certCache:    make(map[string]*tls.Certificate),
 	}
@@ -161,6 +162,9 @@ func (s *Server) Start() error {
 
 	for _, d := range domains {
 		log.Info("  %s.local → localhost:%d", d.Name, d.Port)
+		for _, r := range d.Routes {
+			log.Info("    %s → localhost:%d", r.Path, r.Port)
+		}
 	}
 
 	errCh := make(chan error, 2)
@@ -207,7 +211,7 @@ func (s *Server) ReloadConfig() (*config.Config, error) {
 }
 
 func (s *Server) applyConfig(cfg *config.Config) error {
-	routes := make(map[string]*domainRoute, len(cfg.Domains))
+	routes := make(map[string]*domainRouter, len(cfg.Domains))
 	knownDomains := make(map[string]struct{}, len(cfg.Domains))
 	certCache := make(map[string]*tls.Certificate, len(cfg.Domains))
 	defaultDomain := ""
@@ -225,10 +229,23 @@ func (s *Server) applyConfig(cfg *config.Config) error {
 			return fmt.Errorf("loading cert for %s: %w", d.Name, err)
 		}
 
-		routes[d.Name] = &domainRoute{
-			port:  d.Port,
-			proxy: newDomainProxy(d.Port, s.transport),
+		router := &domainRouter{
+			defaultPort:  d.Port,
+			defaultProxy: newDomainProxy(d.Port, s.transport),
 		}
+
+		for _, r := range d.Routes {
+			router.pathRoutes = append(router.pathRoutes, pathRoute{
+				prefix: r.Path,
+				port:   r.Port,
+				proxy:  newDomainProxy(r.Port, s.transport),
+			})
+		}
+		sort.Slice(router.pathRoutes, func(i, j int) bool {
+			return len(router.pathRoutes[i].prefix) > len(router.pathRoutes[j].prefix)
+		})
+
+		routes[d.Name] = router
 		knownDomains[d.Name] = struct{}{}
 		certCache[d.Name] = tlsCert
 	}

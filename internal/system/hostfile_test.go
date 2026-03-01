@@ -27,13 +27,13 @@ func TestLineHasHost(t *testing.T) {
 func TestHasMarkedEntry(t *testing.T) {
 	content := "127.0.0.1 localhost\n127.0.0.1 myapp.local # slim\n"
 
-	if !hasMarkedEntry(content, "myapp.local") {
+	if !HasMarkedEntry(content, "myapp.local") {
 		t.Error("expected to find marked entry for myapp.local")
 	}
-	if hasMarkedEntry(content, "other.local") {
+	if HasMarkedEntry(content, "other.local") {
 		t.Error("did not expect to find marked entry for other.local")
 	}
-	if hasMarkedEntry("", "myapp.local") {
+	if HasMarkedEntry("", "myapp.local") {
 		t.Error("did not expect to find entry in empty content")
 	}
 }

@@ -10,38 +10,37 @@
   <div class="px-[18px] pt-4 pb-[18px] font-mono text-[13px] leading-[1.7] text-code-text max-sm:text-[11.5px]">
     <div class="flex gap-2">
       <span class="text-[#10b981] select-none">$</span>
-      <span><span class="text-[#7dd3fc]">slim</span> start myapp <span class="text-[#a78bfa]">--port</span> <span class="text-[#fbbf24]">3000</span></span>
+      <span><span class="text-[#7dd3fc]">slim</span> start web <span class="text-[#a78bfa]">--port</span> <span class="text-[#fbbf24]">3000</span></span>
     </div>
     <div class="pl-4 whitespace-nowrap">
-      <span class="text-[#34d399]">&#10003;</span> <span class="text-[#34d399] font-medium">https://myapp.local</span> <span class="text-[#525252]">&rarr;</span> <span class="text-[#737373]">localhost:3000</span>
+      <span class="text-[#34d399]">&#10003;</span> <span class="text-[#34d399] font-medium">https://web.local</span> <span class="text-[#525252]">&rarr;</span> <span class="text-[#737373]">localhost:3000</span>
     </div>
     <div class="flex gap-2 mt-2.5">
       <span class="text-[#10b981] select-none">$</span>
-      <span><span class="text-[#7dd3fc]">slim</span> start api <span class="text-[#a78bfa]">--port</span> <span class="text-[#fbbf24]">8080</span></span>
+      <span><span class="text-[#7dd3fc]">slim</span> start myapp <span class="text-[#a78bfa]">--port</span> <span class="text-[#fbbf24]">3000</span> <span class="text-[#a78bfa]">--route</span> <span class="text-[#fbbf24]">/api=8080</span></span>
     </div>
-    <div class="pl-4 whitespace-nowrap">
-      <span class="text-[#34d399]">&#10003;</span> <span class="text-[#34d399] font-medium">https://api.local</span> <span class="text-[#525252]">&rarr;</span> <span class="text-[#737373]">localhost:8080</span>
+    <div class="pl-4 grid grid-cols-[auto_auto_auto] gap-x-2 whitespace-nowrap w-fit">
+      <div><span class="text-[#34d399]">&#10003;</span> <span class="text-[#34d399] font-medium">https://myapp.local</span></div>
+      <div><span class="text-[#525252]">&rarr;</span></div>
+      <div><span class="text-[#737373]">localhost:3000</span></div>
+      <div>&nbsp;&nbsp;<span class="text-[#34d399] font-medium">https://myapp.local/api</span></div>
+      <div><span class="text-[#525252]">&rarr;</span></div>
+      <div><span class="text-[#737373]">localhost:8080</span></div>
     </div>
     <div class="flex gap-2 mt-2.5">
       <span class="text-[#10b981] select-none">$</span>
-      <span><span class="text-[#7dd3fc]">slim</span> list</span>
+      <span><span class="text-[#7dd3fc]">slim</span> up</span> <span class="text-[#525252]">&nbsp;# .slim.yaml</span>
     </div>
-    <div class="pl-4 mt-0.5">
-      <div class="grid grid-cols-[120px_50px_1fr] max-sm:grid-cols-[100px_44px_1fr]">
-        <span class="text-[#525252] text-xs uppercase tracking-[0.03em]">DOMAIN</span>
-        <span class="text-[#525252] text-xs uppercase tracking-[0.03em]">PORT</span>
-        <span class="text-[#525252] text-xs uppercase tracking-[0.03em]">STATUS</span>
-      </div>
-      <div class="grid grid-cols-[120px_50px_1fr] max-sm:grid-cols-[100px_44px_1fr]">
-        <span class="text-code-text">myapp.local</span>
-        <span class="text-[#a3a3a3]">3000</span>
-        <span class="text-[#a3a3a3]"><span class="text-[#34d399]">&#9679;</span> healthy</span>
-      </div>
-      <div class="grid grid-cols-[120px_50px_1fr] max-sm:grid-cols-[100px_44px_1fr]">
-        <span class="text-code-text">api.local</span>
-        <span class="text-[#a3a3a3]">8080</span>
-        <span class="text-[#a3a3a3]"><span class="text-[#34d399]">&#9679;</span> healthy</span>
-      </div>
+    <div class="pl-4 grid grid-cols-[auto_auto_auto] gap-x-2 whitespace-nowrap w-fit">
+      <div><span class="text-[#34d399]">&#10003;</span> <span class="text-[#34d399] font-medium">https://myapp.local</span></div>
+      <div><span class="text-[#525252]">&rarr;</span></div>
+      <div><span class="text-[#737373]">localhost:3000</span></div>
+      <div>&nbsp;&nbsp;<span class="text-[#34d399] font-medium">https://myapp.local/api</span></div>
+      <div><span class="text-[#525252]">&rarr;</span></div>
+      <div><span class="text-[#737373]">localhost:8080</span></div>
+      <div><span class="text-[#34d399]">&#10003;</span> <span class="text-[#34d399] font-medium">https://dashboard.local</span></div>
+      <div><span class="text-[#525252]">&rarr;</span></div>
+      <div><span class="text-[#737373]">localhost:5173</span></div>
     </div>
   </div>
 </div>

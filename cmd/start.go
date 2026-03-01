@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -18,6 +19,7 @@ var startPort int
 var startLogMode string
 var startWait bool
 var startWaitTimeout time.Duration
+var startRoutes []string
 
 var startCmd = &cobra.Command{
 	Use:   "start [name] --port [port]",
@@ -43,6 +45,11 @@ Runs first-time setup automatically if needed.
 			}
 		}
 
+		routes, err := parseRouteFlags(startRoutes)
+		if err != nil {
+			return err
+		}
+
 		if err := setup.EnsureFirstRun(); err != nil {
 			return err
 		}
@@ -55,7 +62,7 @@ Runs first-time setup automatically if needed.
 			if startLogMode != "" {
 				cfg.LogMode = strings.ToLower(strings.TrimSpace(startLogMode))
 			}
-			return cfg.SetDomain(name, startPort)
+			return cfg.SetDomain(name, startPort, routes)
 		}); err != nil {
 			return err
 		}
@@ -85,17 +92,48 @@ Runs first-time setup automatically if needed.
 		}
 
 		if startWait {
-			fmt.Printf("Waiting for localhost:%d (timeout %s)... ", startPort, startWaitTimeout)
-			if err := proxy.WaitForUpstream(startPort, startWaitTimeout); err != nil {
-				fmt.Println("timed out")
-				return err
+			waitPorts := []int{startPort}
+			for _, r := range routes {
+				waitPorts = append(waitPorts, r.Port)
 			}
-			fmt.Println("ready")
+			for _, p := range waitPorts {
+				fmt.Printf("Waiting for localhost:%d (timeout %s)... ", p, startWaitTimeout)
+				if err := proxy.WaitForUpstream(p, startWaitTimeout); err != nil {
+					fmt.Println("timed out")
+					return err
+				}
+				fmt.Println("ready")
+			}
 		}
 
 		fmt.Printf("https://%s.local → localhost:%d\n", name, startPort)
+		for _, r := range routes {
+			fmt.Printf("  %s → localhost:%d\n", r.Path, r.Port)
+		}
 		return nil
 	},
+}
+
+func parseRouteFlags(flags []string) ([]config.Route, error) {
+	if len(flags) == 0 {
+		return nil, nil
+	}
+	routes := make([]config.Route, 0, len(flags))
+	for _, f := range flags {
+		parts := strings.SplitN(f, "=", 2)
+		if len(parts) != 2 {
+			return nil, fmt.Errorf("invalid route %q: expected path=port (e.g. /api=8080)", f)
+		}
+		port, err := strconv.Atoi(parts[1])
+		if err != nil {
+			return nil, fmt.Errorf("invalid route port %q: %w", parts[1], err)
+		}
+		if err := config.ValidateRoute(parts[0], port); err != nil {
+			return nil, err
+		}
+		routes = append(routes, config.Route{Path: parts[0], Port: port})
+	}
+	return routes, nil
 }
 
 func validateStartWaitFlags(timeoutChanged bool, wait bool, timeout time.Duration) error {
@@ -110,6 +148,7 @@ func validateStartWaitFlags(timeoutChanged bool, wait bool, timeout time.Duratio
 
 func init() {
 	startCmd.Flags().IntVarP(&startPort, "port", "p", 0, "Local port to proxy to (required)")
+	startCmd.Flags().StringArrayVar(&startRoutes, "route", nil, "Route a path to a different port (e.g. /api=8080), repeatable")
 	startCmd.Flags().StringVar(&startLogMode, "log-mode", "", "Access log mode: full|minimal|off")
 	startCmd.Flags().BoolVar(&startWait, "wait", false, "Wait for the upstream app to become reachable before returning")
 	startCmd.Flags().DurationVar(&startWaitTimeout, "timeout", 30*time.Second, "Maximum time to wait for upstream with --wait")

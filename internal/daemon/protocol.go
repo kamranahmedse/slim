@@ -27,8 +27,15 @@ type StatusData struct {
 	Domains []DomainInfo `json:"domains"`
 }
 
-type DomainInfo struct {
-	Name    string `json:"name"`
+type RouteInfo struct {
+	Path    string `json:"path"`
 	Port    int    `json:"port"`
 	Healthy bool   `json:"healthy"`
+}
+
+type DomainInfo struct {
+	Name    string      `json:"name"`
+	Port    int         `json:"port"`
+	Healthy bool        `json:"healthy"`
+	Routes  []RouteInfo `json:"routes,omitempty"`
 }

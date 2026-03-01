@@ -7,6 +7,9 @@ $ slim start myapp --port 3000
 # Add your API server
 $ slim start api -p 8080
 
+# Route /api requests to a different port
+$ slim start myapp -p 3000 --route /api=8080
+
 # Enable access logging
 $ slim start dashboard -p 5173 --log-mode full
 
@@ -34,6 +37,15 @@ $ slim stop myapp
 # Stop all domains and shutdown daemon
 $ slim stop`;
 
+const upCode = `# Start all services from .slim.yaml
+$ slim up`;
+
+const downCode = `# Stop all project services
+$ slim down`;
+
+const doctorCode = `# Check your local setup
+$ slim doctor`;
+
 const uninstallCode = `# Removes everything: CA, certs, hosts entries,
 # port-forward rules, and config
 $ slim uninstall`;
@@ -49,7 +61,10 @@ $ slim uninstall`;
       <CommandDetail name="slim start <name>" description="Map a domain to a port" code={startCode} open />
       <CommandDetail name="slim list" description="See what's running" code={listCode} />
       <CommandDetail name="slim logs" description="View access logs" code={logsCode} />
+      <CommandDetail name="slim up" description="Start all services from .slim.yaml" code={upCode} />
+      <CommandDetail name="slim down" description="Stop project services" code={downCode} />
       <CommandDetail name="slim stop" description="Stop proxying" code={stopCode} />
+      <CommandDetail name="slim doctor" description="Diagnose setup issues" code={doctorCode} />
       <CommandDetail name="slim uninstall" description="Remove everything" code={uninstallCode} />
     </div>
   </div>

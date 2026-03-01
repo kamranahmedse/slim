@@ -16,9 +16,9 @@
 </p>
 
 ```
-myapp.local     → localhost:3000
-api.local       → localhost:8080
-dashboard.local → localhost:5173
+myapp.local        → localhost:3000
+myapp.local/api    → localhost:8080
+dashboard.local    → localhost:5173
 ```
 
 ## Install
@@ -47,6 +47,12 @@ slim start myapp --port 3000
 # That's it. Open https://myapp.local
 ```
 
+Or define all services in a `.slim.yaml` project config and start them at once:
+
+```bash
+slim up
+```
+
 First run handles all setup automatically (CA generation, keychain trust, port forwarding).
 
 ## Usage
@@ -55,6 +61,12 @@ First run handles all setup automatically (CA generation, keychain trust, port f
 # Start proxying domains
 slim start myapp --port 3000
 slim start api -p 8080
+
+# Route different paths to different upstream ports
+slim start myapp --port 3000 --route /api=8080 --route /ws=9000
+
+# Start all services from .slim.yaml
+slim up
 
 # Optional start flags
 # Access logs: full | minimal | off
@@ -72,12 +84,63 @@ slim logs
 slim logs -f myapp
 slim logs --flush
 
+# Run diagnostic checks
+slim doctor
+
 # Stop proxying one or all
 slim stop myapp
 slim stop
 
+# Stop all project services from .slim.yaml
+slim down
+
 # Version
 slim version
+```
+
+### Path-based Routing
+
+Route different URL paths to different upstream ports on a single domain:
+
+```bash
+slim start myapp --port 3000 --route /api=8080 --route /ws=9000
+```
+
+Routes use longest-prefix matching — `/api/users` matches `/api` before `/`. The `--port` flag sets the default upstream for unmatched paths.
+
+### Project Config (`.slim.yaml`)
+
+Define all services for a project in a `.slim.yaml` file at the project root:
+
+```yaml
+services:
+  - domain: myapp
+    port: 3000
+    routes:
+      - path: /api
+        port: 8080
+  - domain: dashboard
+    port: 5173
+log_mode: minimal
+```
+
+```bash
+slim up     # start all services from .slim.yaml
+slim down   # stop all project services
+```
+
+### Doctor
+
+Run diagnostic checks to verify your setup:
+
+```
+$ slim doctor
+  ✓  CA certificate        valid, expires 2035-02-28
+  ✓  CA trust              trusted by OS
+  ✓  Port forwarding       active (80→10080, 443→10443)
+  ✓  Hosts: myapp.local    present in /etc/hosts
+  !  Daemon                not running
+  ✓  Cert: myapp.local     valid, expires 2027-06-03
 ```
 
 ### Uninstall

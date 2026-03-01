@@ -153,15 +153,26 @@ func handleStatus() Response {
 		return Response{OK: false, Error: err.Error()}
 	}
 
+	var allPorts []int
 	domains := make([]DomainInfo, len(cfg.Domains))
-	ports := make([]int, len(cfg.Domains))
 	for i, d := range cfg.Domains {
 		domains[i] = DomainInfo{Name: d.Name, Port: d.Port}
-		ports[i] = d.Port
+		allPorts = append(allPorts, d.Port)
+		for _, r := range d.Routes {
+			domains[i].Routes = append(domains[i].Routes, RouteInfo{Path: r.Path, Port: r.Port})
+			allPorts = append(allPorts, r.Port)
+		}
 	}
-	health := proxy.CheckUpstreams(ports)
+
+	health := proxy.CheckUpstreams(allPorts)
+	idx := 0
 	for i := range domains {
-		domains[i].Healthy = health[i]
+		domains[i].Healthy = health[idx]
+		idx++
+		for j := range domains[i].Routes {
+			domains[i].Routes[j].Healthy = health[idx]
+			idx++
+		}
 	}
 
 	status := StatusData{

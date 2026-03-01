@@ -1,0 +1,33 @@
+---
+import CommandCode from './command-code.astro';
+
+const routeCliCode = `# Route /api and /ws to different ports
+$ slim start myapp --port 3000 --route /api=8080 --route /ws=9000`;
+
+const routeConfigCode = `services:
+  - domain: myapp
+    port: 3000
+    routes:
+      - path: /api
+        port: 8080
+      - path: /ws
+        port: 9000`;
+---
+
+<section class="pt-11" id="routing">
+  <div class="max-w-[var(--max-width)] mx-auto px-[var(--padding-x)]">
+    <h2 class="font-heading text-[22px] font-semibold tracking-[-0.02em] mb-1.5 text-text max-sm:text-xl">Path Routing</h2>
+    <p class="text-text-tertiary text-sm mb-4 leading-[1.5]">
+      Route different URL paths to different upstream ports on the same domain.
+    </p>
+    <div class="rounded-lg border border-border overflow-hidden">
+      <CommandCode code={routeCliCode} />
+    </div>
+    <p class="text-text-tertiary text-sm mt-4 mb-4 leading-[1.5]">
+      Requests to <code class="bg-[#f5f5f5] px-[5px] py-px rounded-[3px] text-[12.5px] text-text-secondary">https://myapp.local/api/*</code> go to port <code class="bg-[#f5f5f5] px-[5px] py-px rounded-[3px] text-[12.5px] text-text-secondary">8080</code>, while everything else hits <code class="bg-[#f5f5f5] px-[5px] py-px rounded-[3px] text-[12.5px] text-text-secondary">3000</code>. Routes also work in your project config:
+    </p>
+    <div class="rounded-lg border border-border overflow-hidden">
+      <CommandCode code={routeConfigCode} />
+    </div>
+  </div>
+</section>

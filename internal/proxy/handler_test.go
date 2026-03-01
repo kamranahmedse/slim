@@ -23,7 +23,7 @@ func TestBuildHandlerRoutesKnownDomain(t *testing.T) {
 	port := mustPortFromURL(t, upstream.URL)
 	s := &Server{
 		cfg:    &config.Config{},
-		routes: map[string]*domainRoute{"myapp": {port: port, proxy: newDomainProxy(port, newUpstreamTransport())}},
+		routes: map[string]*domainRouter{"myapp": {defaultPort: port, defaultProxy: newDomainProxy(port, newUpstreamTransport())}},
 	}
 
 	req := httptest.NewRequest(http.MethodGet, "https://myapp.local/health?x=1", nil)
@@ -52,7 +52,7 @@ func TestBuildHandlerRoutesKnownDomain(t *testing.T) {
 func TestBuildHandlerUnknownDomainReturnsNotFound(t *testing.T) {
 	s := &Server{
 		cfg:    &config.Config{},
-		routes: map[string]*domainRoute{},
+		routes: map[string]*domainRouter{},
 	}
 
 	req := httptest.NewRequest(http.MethodGet, "https://unknown.local/", nil)
@@ -73,7 +73,7 @@ func TestBuildHandlerUpstreamDownReturnsBadGateway(t *testing.T) {
 	port := freeTCPPort(t)
 	s := &Server{
 		cfg:    &config.Config{},
-		routes: map[string]*domainRoute{"myapp": {port: port, proxy: newDomainProxy(port, newUpstreamTransport())}},
+		routes: map[string]*domainRouter{"myapp": {defaultPort: port, defaultProxy: newDomainProxy(port, newUpstreamTransport())}},
 	}
 
 	req := httptest.NewRequest(http.MethodGet, "https://myapp.local/", nil)
@@ -87,6 +87,42 @@ func TestBuildHandlerUpstreamDownReturnsBadGateway(t *testing.T) {
 	}
 	if !strings.Contains(rr.Body.String(), "Waiting for myapp.local") {
 		t.Fatalf("expected upstream-down page content, got %q", rr.Body.String())
+	}
+}
+
+func TestDomainRouterMatch(t *testing.T) {
+	transport := newUpstreamTransport()
+	router := &domainRouter{
+		defaultPort:  3000,
+		defaultProxy: newDomainProxy(3000, transport),
+		pathRoutes: []pathRoute{
+			{prefix: "/api/v2", port: 9090, proxy: newDomainProxy(9090, transport)},
+			{prefix: "/api", port: 8080, proxy: newDomainProxy(8080, transport)},
+			{prefix: "/ws", port: 9000, proxy: newDomainProxy(9000, transport)},
+		},
+	}
+
+	tests := []struct {
+		path     string
+		wantPort int
+	}{
+		{"/", 3000},
+		{"/about", 3000},
+		{"/api", 8080},
+		{"/api/users", 8080},
+		{"/api/v2", 9090},
+		{"/api/v2/items", 9090},
+		{"/apikeys", 3000},
+		{"/ws", 9000},
+		{"/ws/chat", 9000},
+		{"/other", 3000},
+	}
+
+	for _, tt := range tests {
+		port, _ := router.match(tt.path)
+		if port != tt.wantPort {
+			t.Errorf("match(%q) = %d, want %d", tt.path, port, tt.wantPort)
+		}
 	}
 }
 

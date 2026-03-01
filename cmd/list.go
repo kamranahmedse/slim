@@ -66,28 +66,48 @@ var listCmd = &cobra.Command{
 
 		running := daemon.IsRunning()
 
-		type domainEntry struct {
-			Domain  string `json:"domain"`
+		type routeEntry struct {
+			Path    string `json:"path"`
 			Port    int    `json:"port"`
 			Healthy *bool  `json:"healthy,omitempty"`
 		}
 
+		type domainEntry struct {
+			Domain  string       `json:"domain"`
+			Port    int          `json:"port"`
+			Healthy *bool        `json:"healthy,omitempty"`
+			Routes  []routeEntry `json:"routes,omitempty"`
+		}
+
 		var domains []domainEntry
 		for _, d := range cfg.Domains {
-			domains = append(domains, domainEntry{
+			entry := domainEntry{
 				Domain: d.Name + ".local",
 				Port:   d.Port,
-			})
+			}
+			for _, r := range d.Routes {
+				entry.Routes = append(entry.Routes, routeEntry{Path: r.Path, Port: r.Port})
+			}
+			domains = append(domains, entry)
 		}
 
 		if running && len(domains) > 0 {
-			ports := make([]int, len(cfg.Domains))
-			for i, d := range cfg.Domains {
-				ports[i] = d.Port
+			var allPorts []int
+			for _, d := range cfg.Domains {
+				allPorts = append(allPorts, d.Port)
+				for _, r := range d.Routes {
+					allPorts = append(allPorts, r.Port)
+				}
 			}
-			health := proxy.CheckUpstreams(ports)
+			health := proxy.CheckUpstreams(allPorts)
+			idx := 0
 			for i := range domains {
-				domains[i].Healthy = &health[i]
+				domains[i].Healthy = &health[idx]
+				idx++
+				for j := range domains[i].Routes {
+					domains[i].Routes[j].Healthy = &health[idx]
+					idx++
+				}
 			}
 		}
 
@@ -116,7 +136,7 @@ var listCmd = &cobra.Command{
 
 		w := tabwriter.NewWriter(os.Stdout, 0, 4, 2, ' ', 0)
 
-		if len(domains) > 0 {
+			if len(domains) > 0 {
 			fmt.Fprintln(w, "DOMAIN\tPORT\tSTATUS")
 			for _, e := range domains {
 				status := term.Dim + "-" + term.Reset
@@ -128,6 +148,17 @@ var listCmd = &cobra.Command{
 					}
 				}
 				fmt.Fprintf(w, "%s\t%d\t%s\n", e.Domain, e.Port, status)
+				for _, r := range e.Routes {
+					rStatus := term.Dim + "-" + term.Reset
+					if r.Healthy != nil {
+						if *r.Healthy {
+							rStatus = term.Green + "● reachable" + term.Reset
+						} else {
+							rStatus = term.Red + "● unreachable" + term.Reset
+						}
+					}
+					fmt.Fprintf(w, "  %s\t%d\t%s\n", r.Path, r.Port, rStatus)
+				}
 			}
 		}
 

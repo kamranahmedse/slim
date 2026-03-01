@@ -6,6 +6,8 @@ import Globe from '../icons/globe.astro';
 import FileText from '../icons/file-text.astro';
 import Activity from '../icons/activity.astro';
 import TerminalPrompt from '../icons/terminal-prompt.astro';
+import Route from '../icons/route.astro';
+import Folder from '../icons/folder.astro';
 ---
 
 <section class="pt-10">
@@ -25,6 +27,12 @@ import TerminalPrompt from '../icons/terminal-prompt.astro';
       </FeatureRow>
       <FeatureRow title="Health Monitoring" description="See which upstreams are reachable at a glance.">
         <Activity />
+      </FeatureRow>
+      <FeatureRow title="Path Routing" description="Route different URL paths to different upstream ports.">
+        <Route />
+      </FeatureRow>
+      <FeatureRow title="Project Config" description="Share your dev setup with teammates via .slim.yaml.">
+        <Folder />
       </FeatureRow>
       <FeatureRow title="Zero Config" description="First run handles CA, trust, and port forwarding.">
         <TerminalPrompt />

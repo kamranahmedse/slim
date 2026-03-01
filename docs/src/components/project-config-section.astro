@@ -1,0 +1,37 @@
+---
+import CommandCode from './command-code.astro';
+
+const yamlExample = `services:
+  - domain: myapp
+    port: 3000
+    routes:
+      - path: /api
+        port: 8080
+  - domain: dashboard
+    port: 5173
+log_mode: minimal`;
+
+const upDownCode = `# Start all services defined in .slim.yaml
+$ slim up
+
+# Stop all project services
+$ slim down`;
+---
+
+<section class="pt-11" id="project-config">
+  <div class="max-w-[var(--max-width)] mx-auto px-[var(--padding-x)]">
+    <h2 class="font-heading text-[22px] font-semibold tracking-[-0.02em] mb-1.5 text-text max-sm:text-xl">Project Config</h2>
+    <p class="text-text-tertiary text-sm mb-4 leading-[1.5]">
+      Share your local dev setup with teammates using a <code class="bg-[#f5f5f5] px-[5px] py-px rounded-[3px] text-[12.5px] text-text-secondary">.slim.yaml</code> file.
+    </p>
+    <div class="rounded-lg border border-border overflow-hidden">
+      <CommandCode code={yamlExample} />
+    </div>
+    <p class="text-text-tertiary text-sm mt-4 leading-[1.5]">
+      Run <code class="bg-[#f5f5f5] px-[5px] py-px rounded-[3px] text-[12.5px] text-text-secondary">slim up</code> to start every service in one shot, and <code class="bg-[#f5f5f5] px-[5px] py-px rounded-[3px] text-[12.5px] text-text-secondary">slim down</code> to tear them all down.
+    </p>
+    <div class="rounded-lg border border-border overflow-hidden mt-4">
+      <CommandCode code={upDownCode} />
+    </div>
+  </div>
+</section>

@@ -13,9 +13,25 @@ import (
 	"github.com/kamranahmedse/slim/internal/log"
 )
 
-type domainRoute struct {
-	port  int
-	proxy *httputil.ReverseProxy
+type pathRoute struct {
+	prefix string
+	port   int
+	proxy  *httputil.ReverseProxy
+}
+
+type domainRouter struct {
+	defaultPort  int
+	defaultProxy *httputil.ReverseProxy
+	pathRoutes   []pathRoute // sorted by prefix length descending
+}
+
+func (dr *domainRouter) match(reqPath string) (int, *httputil.ReverseProxy) {
+	for _, pr := range dr.pathRoutes {
+		if reqPath == pr.prefix || (strings.HasPrefix(reqPath, pr.prefix) && (pr.prefix[len(pr.prefix)-1] == '/' || (len(reqPath) > len(pr.prefix) && reqPath[len(pr.prefix)] == '/'))) {
+			return pr.port, pr.proxy
+		}
+	}
+	return dr.defaultPort, dr.defaultProxy
 }
 
 func buildHandler(s *Server) http.Handler {
@@ -28,7 +44,7 @@ func buildHandler(s *Server) http.Handler {
 		}
 
 		s.cfgMu.RLock()
-		route, found := s.routes[name]
+		router, found := s.routes[name]
 		s.cfgMu.RUnlock()
 		if !found {
 			http.NotFound(w, r)
@@ -43,11 +59,12 @@ func buildHandler(s *Server) http.Handler {
 			}
 		}
 
+		port, rp := router.match(r.URL.Path)
 		start := time.Now()
 		recorder := &statusRecorder{ResponseWriter: w, status: 200}
-		route.proxy.ServeHTTP(recorder, r)
+		rp.ServeHTTP(recorder, r)
 
-		log.Request(host, r.Method, r.URL.RequestURI(), route.port, recorder.status, time.Since(start))
+		log.Request(host, r.Method, r.URL.RequestURI(), port, recorder.status, time.Since(start))
 	})
 }
 
