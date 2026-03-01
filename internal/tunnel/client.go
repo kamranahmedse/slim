@@ -86,6 +86,10 @@ func (c *Client) dial(ctx context.Context) (*websocket.Conn, string, error) {
 		return nil, "", fmt.Errorf("registration failed: %s", resp.Error)
 	}
 
+	if resp.Subdomain != "" {
+		c.opts.Subdomain = resp.Subdomain
+	}
+
 	return conn, resp.URL, nil
 }
 
@@ -98,6 +102,7 @@ func (c *Client) readLoop(ctx context.Context, conn *websocket.Conn) {
 			return
 		}
 
+		_ = conn.CloseNow()
 		log.Error("tunnel connection lost: %v", err)
 
 		for {
@@ -163,6 +168,21 @@ func (c *Client) errorResponse(port int, err error) *http.Response {
 func (c *Client) readMessages(ctx context.Context, conn *websocket.Conn) error {
 	httpClient := &http.Client{Timeout: 30 * time.Second}
 	var wsMu sync.Mutex
+
+	go func() {
+		ticker := time.NewTicker(20 * time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				pingCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+				_ = conn.Ping(pingCtx)
+				cancel()
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
 
 	for {
 		msgType, frame, err := conn.Read(ctx)
