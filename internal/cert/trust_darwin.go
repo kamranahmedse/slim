@@ -4,6 +4,7 @@ package cert
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 )
@@ -25,6 +26,9 @@ func TrustCA() error {
 }
 
 func UntrustCA() error {
+	if _, err := os.Stat(CACertPath()); os.IsNotExist(err) {
+		return nil
+	}
 	cmd := execCommandDarwinFn("sudo", "security", "remove-trusted-cert",
 		"-d", CACertPath(),
 	)
