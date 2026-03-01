@@ -24,6 +24,36 @@ type Info struct {
 }
 
 func Login() (*Info, error) {
+	existing, _ := LoadAuth()
+	if existing != nil && validateToken(existing.Token) {
+		return existing, nil
+	}
+
+	if existing != nil {
+		_ = Logout()
+	}
+
+	return startOAuthLogin()
+}
+
+func validateToken(token string) bool {
+	req, err := http.NewRequest("GET", apiBase+"/api/me", nil)
+	if err != nil {
+		return false
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	client := &http.Client{Timeout: 5 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return false
+	}
+	resp.Body.Close()
+
+	return resp.StatusCode == http.StatusOK
+}
+
+func startOAuthLogin() (*Info, error) {
 	resp, err := http.Post(apiBase+"/api/auth/cli", "application/json", nil)
 	if err != nil {
 		return nil, httperr.Wrap("failed to start login", err)
@@ -47,6 +77,10 @@ func Login() (*Info, error) {
 		fmt.Printf("Could not open browser. Please visit:\n  %s\n", cliResp.URL)
 	}
 
+	return pollForCompletion(cliResp.Code)
+}
+
+func pollForCompletion(code string) (*Info, error) {
 	fmt.Println("Waiting for authentication...")
 	client := &http.Client{Timeout: 5 * time.Second}
 	deadline := time.Now().Add(30 * time.Second)
@@ -55,7 +89,7 @@ func Login() (*Info, error) {
 	for time.Now().Before(deadline) {
 		time.Sleep(2 * time.Second)
 
-		pollResp, err := client.Get(fmt.Sprintf("%s/api/auth/cli/poll?code=%s", apiBase, cliResp.Code))
+		pollResp, err := client.Get(fmt.Sprintf("%s/api/auth/cli/poll?code=%s", apiBase, code))
 		if err != nil {
 			lastPollErr = err
 			continue
