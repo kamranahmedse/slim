@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Server Unavailable — slim</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#fafafa;color:#111}
+.container{text-align:center;padding:2rem;max-width:420px}
+.icon{margin:0 auto 1rem}
+.status{font-size:5rem;font-weight:700;letter-spacing:-2px;color:#e5e5e5;line-height:1}
+h1{font-size:1.25rem;font-weight:600;margin:.75rem 0 .5rem;text-wrap:balance}
+p{font-size:.9rem;color:#666;line-height:1.5;text-wrap:balance}
+details{margin-top:1.25rem;text-align:left}
+summary{font-size:.8rem;color:#999;cursor:pointer;text-align:center;list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"▶ ";font-size:.6rem;vertical-align:1px}
+details[open] summary::before{content:"▼ "}
+.detail-box{margin-top:.5rem;padding:.75rem 1rem;background:#f0f0f0;border-radius:6px;font-size:.8rem;color:#555;line-height:1.5}
+</style>
+</head>
+<body>
+<div class="container">
+<div class="icon">
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none" stroke="#ccc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+<path d="M20 28h-6a4 4 0 0 1-4-4v-4a4 4 0 0 1 4-4h6"/>
+<rect x="20" y="18" width="6" height="12" rx="1"/>
+<line x1="14" y1="22" x2="10" y2="22"/>
+<line x1="14" y1="26" x2="10" y2="26"/>
+<path d="M44 28h6a4 4 0 0 0 4-4v-4a4 4 0 0 0-4-4h-6"/>
+<rect x="38" y="18" width="6" height="12" rx="1"/>
+<line x1="50" y1="22" x2="54" y2="22"/>
+<line x1="50" y1="26" x2="54" y2="26"/>
+<path d="M29 24h2m4 0h2" stroke="#bbb" stroke-dasharray="2 2"/>
+<line x1="24" y1="44" x2="40" y2="44" stroke="#ddd"/>
+<line x1="28" y1="48" x2="36" y2="48" stroke="#ddd"/>
+</svg>
+</div>
+<div class="status">502</div>
+<h1>Server Unavailable</h1>
+<p>This site can't be reached right now. Please try again later.</p>
+<details>
+<summary>More details</summary>
+<div class="detail-box">The local server on port {{.Port}} is not responding.{{if .Error}} {{.Error}}{{end}}</div>
+</details>
+</div>
+</body>
+</html>

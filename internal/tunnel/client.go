@@ -1,8 +1,10 @@
 package tunnel
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 	"sync"
@@ -133,6 +135,31 @@ func (c *Client) readLoop(ctx context.Context, conn *websocket.Conn) {
 	}
 }
 
+func (c *Client) errorResponse(port int, err error) *http.Response {
+	data := serverDownData{Port: port}
+	if err != nil {
+		data.Error = err.Error()
+	}
+
+	var buf bytes.Buffer
+	_ = serverDownTmpl.Execute(&buf, data)
+
+	return &http.Response{
+		StatusCode: http.StatusBadGateway,
+		Status:     "502 Bad Gateway",
+		Proto:      "HTTP/1.1",
+		ProtoMajor: 1,
+		ProtoMinor: 1,
+		Header: http.Header{
+			"Content-Type":   {"text/html; charset=utf-8"},
+			"X-Slim-Error":   {"connection-failed"},
+			"Content-Length": {fmt.Sprintf("%d", buf.Len())},
+		},
+		Body:          io.NopCloser(&buf),
+		ContentLength: int64(buf.Len()),
+	}
+}
+
 func (c *Client) readMessages(ctx context.Context, conn *websocket.Conn) error {
 	httpClient := &http.Client{Timeout: 30 * time.Second}
 	var wsMu sync.Mutex
@@ -177,7 +204,7 @@ func (c *Client) handleRequest(ctx context.Context, conn *websocket.Conn, wsMu *
 	resp, err := httpClient.Do(localReq)
 	if err != nil {
 		log.Error("forwarding to localhost:%d: %v", c.opts.LocalPort, err)
-		return
+		resp = c.errorResponse(c.opts.LocalPort, err)
 	}
 	defer resp.Body.Close()
 
