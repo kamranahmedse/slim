@@ -230,15 +230,15 @@ func (s *Server) applyConfig(cfg *config.Config) error {
 		}
 
 		router := &domainRouter{
-			defaultPort:  d.Port,
-			defaultProxy: newDomainProxy(d.Port, s.transport),
+			defaultPort:    d.Port,
+			defaultHandler: newDomainProxy(d.Port, s.transport),
 		}
 
 		for _, r := range d.Routes {
 			router.pathRoutes = append(router.pathRoutes, pathRoute{
-				prefix: r.Path,
-				port:   r.Port,
-				proxy:  newDomainProxy(r.Port, s.transport),
+				prefix:  r.Path,
+				port:    r.Port,
+				handler: http.StripPrefix(r.Path, newDomainProxy(r.Port, s.transport)),
 			})
 		}
 		sort.Slice(router.pathRoutes, func(i, j int) bool {

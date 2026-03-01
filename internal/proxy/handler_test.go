@@ -23,7 +23,7 @@ func TestBuildHandlerRoutesKnownDomain(t *testing.T) {
 	port := mustPortFromURL(t, upstream.URL)
 	s := &Server{
 		cfg:    &config.Config{},
-		routes: map[string]*domainRouter{"myapp": {defaultPort: port, defaultProxy: newDomainProxy(port, newUpstreamTransport())}},
+		routes: map[string]*domainRouter{"myapp": {defaultPort: port, defaultHandler: newDomainProxy(port, newUpstreamTransport())}},
 	}
 
 	req := httptest.NewRequest(http.MethodGet, "https://myapp.local/health?x=1", nil)
@@ -73,7 +73,7 @@ func TestBuildHandlerUpstreamDownReturnsBadGateway(t *testing.T) {
 	port := freeTCPPort(t)
 	s := &Server{
 		cfg:    &config.Config{},
-		routes: map[string]*domainRouter{"myapp": {defaultPort: port, defaultProxy: newDomainProxy(port, newUpstreamTransport())}},
+		routes: map[string]*domainRouter{"myapp": {defaultPort: port, defaultHandler: newDomainProxy(port, newUpstreamTransport())}},
 	}
 
 	req := httptest.NewRequest(http.MethodGet, "https://myapp.local/", nil)
@@ -92,13 +92,14 @@ func TestBuildHandlerUpstreamDownReturnsBadGateway(t *testing.T) {
 
 func TestDomainRouterMatch(t *testing.T) {
 	transport := newUpstreamTransport()
+	proxy := newDomainProxy(3000, transport)
 	router := &domainRouter{
-		defaultPort:  3000,
-		defaultProxy: newDomainProxy(3000, transport),
+		defaultPort:    3000,
+		defaultHandler: proxy,
 		pathRoutes: []pathRoute{
-			{prefix: "/api/v2", port: 9090, proxy: newDomainProxy(9090, transport)},
-			{prefix: "/api", port: 8080, proxy: newDomainProxy(8080, transport)},
-			{prefix: "/ws", port: 9000, proxy: newDomainProxy(9000, transport)},
+			{prefix: "/api/v2", port: 9090, handler: http.StripPrefix("/api/v2", newDomainProxy(9090, transport))},
+			{prefix: "/api", port: 8080, handler: http.StripPrefix("/api", newDomainProxy(8080, transport))},
+			{prefix: "/ws", port: 9000, handler: http.StripPrefix("/ws", newDomainProxy(9000, transport))},
 		},
 	}
 
@@ -122,6 +123,55 @@ func TestDomainRouterMatch(t *testing.T) {
 		port, _ := router.match(tt.path)
 		if port != tt.wantPort {
 			t.Errorf("match(%q) = %d, want %d", tt.path, port, tt.wantPort)
+		}
+	}
+}
+
+func TestPathRouteStripsPrefix(t *testing.T) {
+	pathCh := make(chan string, 1)
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		pathCh <- r.URL.Path
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer upstream.Close()
+
+	apiPort := mustPortFromURL(t, upstream.URL)
+	s := &Server{
+		cfg: &config.Config{},
+		routes: map[string]*domainRouter{
+			"myapp": {
+				defaultPort:    3000,
+				defaultHandler: newDomainProxy(3000, newUpstreamTransport()),
+				pathRoutes: []pathRoute{
+					{prefix: "/api", port: apiPort, handler: http.StripPrefix("/api", newDomainProxy(apiPort, newUpstreamTransport()))},
+				},
+			},
+		},
+	}
+
+	tests := []struct {
+		reqPath  string
+		wantPath string
+	}{
+		{"/api/v1/health", "/v1/health"},
+		{"/api/users/123", "/users/123"},
+		{"/api", "/"},
+	}
+
+	for _, tt := range tests {
+		req := httptest.NewRequest(http.MethodGet, "https://myapp.local"+tt.reqPath, nil)
+		req.Host = "myapp.local"
+		rr := httptest.NewRecorder()
+
+		buildHandler(s).ServeHTTP(rr, req)
+
+		select {
+		case gotPath := <-pathCh:
+			if gotPath != tt.wantPath {
+				t.Errorf("request %s: upstream got path %q, want %q", tt.reqPath, gotPath, tt.wantPath)
+			}
+		default:
+			t.Errorf("request %s: upstream was not called", tt.reqPath)
 		}
 	}
 }

@@ -14,24 +14,24 @@ import (
 )
 
 type pathRoute struct {
-	prefix string
-	port   int
-	proxy  *httputil.ReverseProxy
+	prefix  string
+	port    int
+	handler http.Handler
 }
 
 type domainRouter struct {
-	defaultPort  int
-	defaultProxy *httputil.ReverseProxy
-	pathRoutes   []pathRoute // sorted by prefix length descending
+	defaultPort    int
+	defaultHandler http.Handler
+	pathRoutes     []pathRoute // sorted by prefix length descending
 }
 
-func (dr *domainRouter) match(reqPath string) (int, *httputil.ReverseProxy) {
+func (dr *domainRouter) match(reqPath string) (int, http.Handler) {
 	for _, pr := range dr.pathRoutes {
 		if reqPath == pr.prefix || (strings.HasPrefix(reqPath, pr.prefix) && (pr.prefix[len(pr.prefix)-1] == '/' || (len(reqPath) > len(pr.prefix) && reqPath[len(pr.prefix)] == '/'))) {
-			return pr.port, pr.proxy
+			return pr.port, pr.handler
 		}
 	}
-	return dr.defaultPort, dr.defaultProxy
+	return dr.defaultPort, dr.defaultHandler
 }
 
 func buildHandler(s *Server) http.Handler {
@@ -59,10 +59,10 @@ func buildHandler(s *Server) http.Handler {
 			}
 		}
 
-		port, rp := router.match(r.URL.Path)
+		port, handler := router.match(r.URL.Path)
 		start := time.Now()
 		recorder := &statusRecorder{ResponseWriter: w, status: 200}
-		rp.ServeHTTP(recorder, r)
+		handler.ServeHTTP(recorder, r)
 
 		log.Request(host, r.Method, r.URL.RequestURI(), port, recorder.status, time.Since(start))
 	})
