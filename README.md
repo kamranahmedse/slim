@@ -67,6 +67,7 @@ slim start myapp --port 3000 --route /api=8080 --route /ws=9000
 
 # Start all services from .slim.yaml
 slim up
+slim up --config /path/to/.slim.yaml
 
 # Optional start flags
 # Access logs: full | minimal | off
@@ -93,6 +94,7 @@ slim stop
 
 # Stop all project services from .slim.yaml
 slim down
+slim down --config /path/to/.slim.yaml
 
 # Version
 slim version
@@ -125,8 +127,9 @@ log_mode: minimal
 ```
 
 ```bash
-slim up     # start all services from .slim.yaml
-slim down   # stop all project services
+slim up                              # start all services from .slim.yaml
+slim up --config /path/to/.slim.yaml # or specify a config path
+slim down                            # stop all project services
 ```
 
 ### Doctor

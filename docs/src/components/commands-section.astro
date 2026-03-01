@@ -38,10 +38,16 @@ $ slim stop myapp
 $ slim stop`;
 
 const upCode = `# Start all services from .slim.yaml
-$ slim up`;
+$ slim up
+
+# Or specify a config path
+$ slim up --config /path/to/.slim.yaml`;
 
 const downCode = `# Stop all project services
-$ slim down`;
+$ slim down
+
+# Or specify a config path
+$ slim down --config /path/to/.slim.yaml`;
 
 const doctorCode = `# Check your local setup
 $ slim doctor`;
