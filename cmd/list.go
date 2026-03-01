@@ -168,7 +168,7 @@ var listCmd = &cobra.Command{
 			}
 			fmt.Fprintln(w, "TUNNEL\tURL\tREQUESTS")
 			for _, t := range tunnels {
-				fmt.Fprintf(w, "%s\t%s\t%d\n", t.Subdomain+".slim.sh", t.URL, t.RequestCount)
+				fmt.Fprintf(w, "%s\t%s\t%d\n", t.Subdomain+".slim.show", t.URL, t.RequestCount)
 			}
 		}
 

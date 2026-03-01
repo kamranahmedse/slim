@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"os/exec"
 
 	"github.com/kamranahmedse/slim/internal/cert"
 	"github.com/kamranahmedse/slim/internal/config"
@@ -16,6 +17,18 @@ var uninstallCmd = &cobra.Command{
 	Short: "Remove all slim data and configuration",
 	Args:  cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		if os.Geteuid() != 0 {
+			exe, err := os.Executable()
+			if err != nil {
+				return fmt.Errorf("failed to find slim binary: %w", err)
+			}
+			sudoCmd := exec.Command("sudo", "--preserve-env=HOME", exe, "uninstall")
+			sudoCmd.Stdin = os.Stdin
+			sudoCmd.Stdout = os.Stdout
+			sudoCmd.Stderr = os.Stderr
+			return sudoCmd.Run()
+		}
+
 		fmt.Println("Uninstalling slim...")
 
 		if daemon.IsRunning() {

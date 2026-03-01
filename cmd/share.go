@@ -25,7 +25,7 @@ var shareTTL time.Duration
 var shareCmd = &cobra.Command{
 	Use:   "share",
 	Short: "Share a local port via tunnel",
-	Long: `Expose a local dev server to the internet via a slim.sh tunnel.
+	Long: `Expose a local dev server to the internet via a slim.show tunnel.
 
   slim share --port 3000
   slim share --port 3000 --subdomain cool
