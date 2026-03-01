@@ -19,16 +19,26 @@ var (
 	downDaemonSendIPCFn = daemon.SendIPC
 )
 
+var downConfigPath string
+
 var downCmd = &cobra.Command{
 	Use:   "down",
 	Short: "Stop project services from .slim.yaml",
 	Long: `Discover .slim.yaml and stop only the services defined in it.
 Other domains not in the project config are left running.
 
-  slim down`,
+  slim down
+  slim down --config /path/to/.slim.yaml`,
 	Args: cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		pc, _, err := downDiscoverFn()
+		var pc *project.ProjectConfig
+		var err error
+
+		if downConfigPath != "" {
+			pc, err = project.Load(downConfigPath)
+		} else {
+			pc, _, err = downDiscoverFn()
+		}
 		if err != nil {
 			return err
 		}
@@ -84,5 +94,6 @@ Other domains not in the project config are left running.
 }
 
 func init() {
+	downCmd.Flags().StringVarP(&downConfigPath, "config", "c", "", "Path to .slim.yaml")
 	rootCmd.AddCommand(downCmd)
 }
