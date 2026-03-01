@@ -10,7 +10,6 @@
 
 <p align="center">
   <a href="https://slim.sh"><img src="https://img.shields.io/badge/website-slim.sh-0f172a?style=flat-square" alt="Website"></a>
-  <a href="./LICENSE"><img src="https://img.shields.io/badge/license-PolyForm%20Shield-16a34a?style=flat-square" alt="PolyForm Shield License 1.0.0"></a>
   <img src="https://img.shields.io/badge/go-1.25%2B-00ADD8?style=flat-square&logo=go&logoColor=white" alt="Go 1.25+">
   <img src="https://img.shields.io/badge/platform-macOS%20%7C%20Linux-111827?style=flat-square" alt="Platform">
 </p>
@@ -175,4 +174,4 @@ slim start myapp --port 3000 --log-mode off
 
 ## License
 
-PolyForm Shield 1.0.0 © [Kamran Ahmed](https://x.com/kamrify)
+[PolyForm Shield 1.0.0](./LICENSE) © [Kamran Ahmed](https://x.com/kamrify)
