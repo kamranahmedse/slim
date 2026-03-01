@@ -45,12 +45,14 @@ func fetchActiveTunnels(token string) []activeTunnel {
 		return nil
 	}
 
-	var tunnels []activeTunnel
-	if err := json.NewDecoder(resp.Body).Decode(&tunnels); err != nil {
+	var body struct {
+		Tunnels []activeTunnel `json:"tunnels"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
 		return nil
 	}
 
-	return tunnels
+	return body.Tunnels
 }
 
 var listCmd = &cobra.Command{
