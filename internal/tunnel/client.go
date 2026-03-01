@@ -10,11 +10,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/coder/websocket"
+	"github.com/coder/websocket/wsjson"
 	"github.com/kamranahmedse/slim/internal/httperr"
 	"github.com/kamranahmedse/slim/internal/log"
 	proto "github.com/kamranahmedse/slim/protocol"
-	"github.com/coder/websocket"
-	"github.com/coder/websocket/wsjson"
 )
 
 type RequestEvent struct {
@@ -99,6 +99,11 @@ func (c *Client) readLoop(ctx context.Context, conn *websocket.Conn) {
 	for {
 		err := c.readMessages(ctx, conn)
 		if err == nil || ctx.Err() != nil {
+			return
+		}
+
+		if websocket.CloseStatus(err) == 4000 {
+			log.Info("tunnel expired (TTL reached)")
 			return
 		}
 
