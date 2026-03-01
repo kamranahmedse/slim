@@ -107,7 +107,11 @@ func pollForCompletion(code string) (*Info, error) {
 				Email string `json:"email"`
 			} `json:"user"`
 		}
-		json.NewDecoder(pollResp.Body).Decode(&result)
+		if err := json.NewDecoder(pollResp.Body).Decode(&result); err != nil {
+			pollResp.Body.Close()
+			lastPollErr = fmt.Errorf("decoding poll response: %w", err)
+			continue
+		}
 		pollResp.Body.Close()
 
 		if result.Status != "complete" {

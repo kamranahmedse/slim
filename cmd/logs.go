@@ -60,7 +60,7 @@ var logsCmd = &cobra.Command{
 		}
 
 		if logsFollow {
-			f.Seek(0, io.SeekEnd)
+			_, _ = f.Seek(0, io.SeekEnd)
 		}
 
 		reader := bufio.NewReader(f)

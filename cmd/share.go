@@ -102,7 +102,7 @@ var shareCmd = &cobra.Command{
 
 func init() {
 	shareCmd.Flags().IntVarP(&sharePort, "port", "p", 0, "Local port to expose")
-	shareCmd.MarkFlagRequired("port")
+	_ = shareCmd.MarkFlagRequired("port")
 	shareCmd.Flags().StringVar(&shareName, "subdomain", "", "Vanity subdomain name")
 	shareCmd.Flags().BoolVar(&sharePassword, "password", false, "Require password (auto-generated)")
 	shareCmd.Flags().DurationVar(&shareTTL, "ttl", 1*time.Hour, "Tunnel time-to-live (max 1h)")

@@ -45,17 +45,17 @@ func (s *IPCServer) Serve() {
 
 func (s *IPCServer) handleConn(conn net.Conn) {
 	defer conn.Close()
-	conn.SetDeadline(time.Now().Add(30 * time.Second))
+	_ = conn.SetDeadline(time.Now().Add(30 * time.Second))
 
 	var req Request
 	if err := json.NewDecoder(conn).Decode(&req); err != nil {
 		resp := Response{OK: false, Error: err.Error()}
-		json.NewEncoder(conn).Encode(resp)
+		_ = json.NewEncoder(conn).Encode(resp)
 		return
 	}
 
 	resp := s.handler(req)
-	json.NewEncoder(conn).Encode(resp)
+	_ = json.NewEncoder(conn).Encode(resp)
 }
 
 func (s *IPCServer) Close() {
@@ -70,7 +70,7 @@ func SendIPC(req Request) (*Response, error) {
 	}
 	defer conn.Close()
 
-	conn.SetDeadline(time.Now().Add(30 * time.Second))
+	_ = conn.SetDeadline(time.Now().Add(30 * time.Second))
 
 	if err := json.NewEncoder(conn).Encode(req); err != nil {
 		return nil, fmt.Errorf("sending request: %w", err)

@@ -11,8 +11,8 @@ import (
 	"github.com/kamranahmedse/slim/internal/httperr"
 	"github.com/kamranahmedse/slim/internal/log"
 	proto "github.com/kamranahmedse/slim/protocol"
-	"nhooyr.io/websocket"
-	"nhooyr.io/websocket/wsjson"
+	"github.com/coder/websocket"
+	"github.com/coder/websocket/wsjson"
 )
 
 type RequestEvent struct {

@@ -22,7 +22,6 @@ const (
 )
 
 var (
-	logFile    *os.File
 	logMode    = logModeFull
 	logCh      chan string
 	stopWriter chan struct{}
@@ -49,7 +48,6 @@ func SetOutput(path string, mode string) error {
 		return err
 	}
 
-	logFile = f
 	logCh = make(chan string, logBufferSize)
 	stopWriter = make(chan struct{})
 
@@ -166,5 +164,4 @@ func shutdownWriterLocked() {
 		stopWriter = nil
 	}
 	logCh = nil
-	logFile = nil
 }

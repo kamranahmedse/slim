@@ -149,6 +149,6 @@ func init() {
 	startCmd.Flags().StringVar(&startLogMode, "log-mode", "", "Access log mode: full|minimal|off")
 	startCmd.Flags().BoolVar(&startWait, "wait", false, "Wait for the upstream app to become reachable before returning")
 	startCmd.Flags().DurationVar(&startWaitTimeout, "timeout", 30*time.Second, "Maximum time to wait for upstream with --wait")
-	startCmd.MarkFlagRequired("port")
+	_ = startCmd.MarkFlagRequired("port")
 	rootCmd.AddCommand(startCmd)
 }

@@ -54,7 +54,7 @@ func RunDetached() error {
 		return nil
 	}
 
-	defer daemonCtx.Release()
+	defer func() { _ = daemonCtx.Release() }()
 	if err := run(); err != nil {
 		errPath := config.Dir() + "/daemon.err"
 		_ = os.WriteFile(errPath, []byte(err.Error()+"\n"), 0644)
@@ -65,7 +65,7 @@ func RunDetached() error {
 
 func WaitForDaemon() error {
 	errPath := config.Dir() + "/daemon.err"
-	os.Truncate(errPath, 0)
+	_ = os.Truncate(errPath, 0)
 
 	for i := 0; i < 50; i++ {
 		if IsRunning() {
@@ -144,7 +144,7 @@ func handleIPC(req Request, srv *proxy.Server, responder *mdnsResponder) Respons
 	case MsgShutdown:
 		go func() {
 			p, _ := os.FindProcess(os.Getpid())
-			p.Signal(syscall.SIGTERM)
+			_ = p.Signal(syscall.SIGTERM)
 		}()
 		return Response{OK: true}
 
