@@ -28,6 +28,7 @@ type ClientOptions struct {
 	ServerURL string
 	Token     string
 	Subdomain string
+	Domain    string
 	LocalPort int
 	Password  string
 	TTL       time.Duration
@@ -35,7 +36,8 @@ type ClientOptions struct {
 }
 
 type Client struct {
-	opts ClientOptions
+	opts      ClientOptions
+	domainURL string
 }
 
 func NewClient(opts ClientOptions) *Client {
@@ -64,6 +66,7 @@ func (c *Client) dial(ctx context.Context) (*websocket.Conn, string, error) {
 	reg := proto.RegistrationRequest{
 		Token:     c.opts.Token,
 		Subdomain: c.opts.Subdomain,
+		Domain:    c.opts.Domain,
 		Password:  c.opts.Password,
 	}
 	if c.opts.TTL > 0 {
@@ -90,7 +93,17 @@ func (c *Client) dial(ctx context.Context) (*websocket.Conn, string, error) {
 		c.opts.Subdomain = resp.Subdomain
 	}
 
+	if resp.Domain != "" {
+		c.domainURL = "https://" + resp.Domain
+	} else {
+		c.domainURL = ""
+	}
+
 	return conn, resp.URL, nil
+}
+
+func (c *Client) DomainURL() string {
+	return c.domainURL
 }
 
 func (c *Client) readLoop(ctx context.Context, conn *websocket.Conn) {

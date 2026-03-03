@@ -12,6 +12,7 @@ import (
 type RegistrationRequest struct {
 	Token     string `json:"token"`
 	Subdomain string `json:"subdomain"`
+	Domain    string `json:"domain,omitempty"`
 	Password  string `json:"password,omitempty"`
 	TTL       string `json:"ttl,omitempty"`
 }
@@ -20,6 +21,7 @@ type RegistrationResponse struct {
 	OK        bool   `json:"ok"`
 	URL       string `json:"url"`
 	Subdomain string `json:"subdomain"`
+	Domain    string `json:"domain,omitempty"`
 	Error     string `json:"error,omitempty"`
 }
 

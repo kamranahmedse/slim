@@ -138,6 +138,17 @@ func pollForCompletion(code string) (*Info, error) {
 	return nil, fmt.Errorf("login timed out — please try again")
 }
 
+func Require() (*Info, error) {
+	info, err := LoadAuth()
+	if err != nil {
+		return nil, err
+	}
+	if info == nil {
+		return nil, fmt.Errorf("not logged in — run 'slim login' first")
+	}
+	return info, nil
+}
+
 func LoadAuth() (*Info, error) {
 	data, err := os.ReadFile(config.AuthPath())
 	if err != nil {

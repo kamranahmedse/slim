@@ -19,6 +19,7 @@ var sharePort int
 var shareName string
 var sharePassword string
 var shareTTL time.Duration
+var shareDomain string
 
 var shareCmd = &cobra.Command{
 	Use:   "share",
@@ -28,7 +29,8 @@ var shareCmd = &cobra.Command{
   slim share --port 3000
   slim share --port 3000 --subdomain cool
   slim share --port 3000 --password secret
-  slim share --port 3000 --ttl 30m`,
+  slim share --port 3000 --ttl 30m
+  slim share --port 3000 --domain myapp.example.com`,
 	Args: cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		port := sharePort
@@ -36,12 +38,13 @@ var shareCmd = &cobra.Command{
 			return fmt.Errorf("invalid port %d: must be between 1 and 65535", port)
 		}
 
-		info, err := auth.LoadAuth()
+		if shareName != "" && shareDomain != "" {
+			return fmt.Errorf("cannot use --subdomain and --domain together")
+		}
+
+		info, err := auth.Require()
 		if err != nil {
 			return err
-		}
-		if info == nil {
-			return fmt.Errorf("not logged in — run 'slim login' first")
 		}
 		token := info.Token
 
@@ -58,6 +61,7 @@ var shareCmd = &cobra.Command{
 			ServerURL: serverURL,
 			Token:     token,
 			Subdomain: subdomain,
+			Domain:    shareDomain,
 			LocalPort: port,
 			Password:  password,
 			TTL:       shareTTL,
@@ -80,6 +84,9 @@ var shareCmd = &cobra.Command{
 
 		fmt.Println()
 		fmt.Printf("  %s → localhost:%d\n", url, port)
+		if domainURL := client.DomainURL(); domainURL != "" {
+			fmt.Printf("  %s → localhost:%d\n", domainURL, port)
+		}
 		if password != "" {
 			fmt.Printf("  Password: %s\n", password)
 		}
@@ -97,5 +104,6 @@ func init() {
 	shareCmd.Flags().StringVar(&shareName, "subdomain", "", "Vanity subdomain name")
 	shareCmd.Flags().StringVar(&sharePassword, "password", "", "Require password for tunnel access")
 	shareCmd.Flags().DurationVar(&shareTTL, "ttl", 1*time.Hour, "Tunnel time-to-live (max 1h)")
+	shareCmd.Flags().StringVar(&shareDomain, "domain", "", "Custom domain for this tunnel")
 	rootCmd.AddCommand(shareCmd)
 }
