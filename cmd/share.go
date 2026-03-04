@@ -29,7 +29,7 @@ var shareCmd = &cobra.Command{
   slim share --port 3000
   slim share --port 3000 --subdomain cool
   slim share --port 3000 --password secret
-  slim share --port 3000 --ttl 30m
+  slim share --port 3000 --ttl 2h
   slim share --port 3000 --domain myapp.example.com`,
 	Args: cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -96,6 +96,7 @@ var shareCmd = &cobra.Command{
 		fmt.Printf("\nPress Ctrl+C to disconnect\n\n")
 
 		<-ctx.Done()
+		client.Close()
 		fmt.Println("\nDisconnected.")
 		return nil
 	},
@@ -106,7 +107,7 @@ func init() {
 	_ = shareCmd.MarkFlagRequired("port")
 	shareCmd.Flags().StringVar(&shareName, "subdomain", "", "Vanity subdomain name")
 	shareCmd.Flags().StringVar(&sharePassword, "password", "", "Require password for tunnel access")
-	shareCmd.Flags().DurationVar(&shareTTL, "ttl", 1*time.Hour, "Tunnel time-to-live (max 1h)")
+	shareCmd.Flags().DurationVar(&shareTTL, "ttl", 0, "Tunnel time-to-live (e.g. 30m, 1h). Free: max 1h, Pro: unlimited")
 	shareCmd.Flags().StringVar(&shareDomain, "domain", "", "Custom domain for this tunnel")
 	rootCmd.AddCommand(shareCmd)
 }

@@ -38,6 +38,7 @@ type ClientOptions struct {
 type Client struct {
 	opts      ClientOptions
 	domainURL string
+	conn      *websocket.Conn
 }
 
 func NewClient(opts ClientOptions) *Client {
@@ -50,9 +51,16 @@ func (c *Client) Connect(ctx context.Context) (string, error) {
 		return "", err
 	}
 
+	c.conn = conn
 	go c.readLoop(ctx, conn)
 
 	return url, nil
+}
+
+func (c *Client) Close() {
+	if c.conn != nil {
+		c.conn.Close(websocket.StatusNormalClosure, "client disconnected")
+	}
 }
 
 func (c *Client) dial(ctx context.Context) (*websocket.Conn, string, error) {
