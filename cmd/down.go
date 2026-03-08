@@ -55,11 +55,12 @@ Other domains not in the project config are left running.
 			}
 			remove := make(map[string]bool, len(pc.Services))
 			for _, svc := range pc.Services {
-				remove[svc.Domain] = true
+				remove[svc.Name()] = true
+				remove[svc.Hostname(pc.BaseDomain)] = true
 			}
 			filtered := cfg.Domains[:0]
 			for _, d := range cfg.Domains {
-				if !remove[d.Name] {
+				if !remove[d.Name] && !remove[d.ResolvedHostname()] {
 					filtered = append(filtered, d)
 				}
 			}
@@ -71,8 +72,9 @@ Other domains not in the project config are left running.
 		}
 
 		for _, svc := range pc.Services {
-			if err := downRemoveHostFn(svc.Domain); err != nil {
-				fmt.Printf("Warning: failed to remove %s.test from /etc/hosts: %v\n", svc.Domain, err)
+			hostname := svc.Hostname(pc.BaseDomain)
+			if err := downRemoveHostFn(hostname); err != nil {
+				fmt.Printf("Warning: failed to remove %s from /etc/hosts: %v\n", hostname, err)
 			}
 		}
 

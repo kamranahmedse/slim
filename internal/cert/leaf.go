@@ -36,7 +36,7 @@ func LeafExists(name string) bool {
 	return certErr == nil && keyErr == nil
 }
 
-func GenerateLeafCert(name string) error {
+func GenerateLeafCert(hostname string) error {
 	caCert, caKey, err := LoadCA()
 	if err != nil {
 		return fmt.Errorf("loading CA: %w", err)
@@ -56,7 +56,6 @@ func GenerateLeafCert(name string) error {
 		return fmt.Errorf("generating serial: %w", err)
 	}
 
-	hostname := name + ".test"
 	template := &x509.Certificate{
 		SerialNumber: serial,
 		Subject: pkix.Name{
@@ -75,7 +74,7 @@ func GenerateLeafCert(name string) error {
 		return fmt.Errorf("creating leaf cert: %w", err)
 	}
 
-	certFile, err := os.OpenFile(LeafCertPath(name), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	certFile, err := os.OpenFile(LeafCertPath(hostname), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
 		return err
 	}
@@ -84,7 +83,7 @@ func GenerateLeafCert(name string) error {
 		return fmt.Errorf("writing leaf cert: %w", err)
 	}
 
-	keyFile, err := os.OpenFile(LeafKeyPath(name), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+	keyFile, err := os.OpenFile(LeafKeyPath(hostname), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
 		return err
 	}
@@ -100,23 +99,23 @@ func GenerateLeafCert(name string) error {
 	return nil
 }
 
-func LoadLeafTLS(name string) (*tls.Certificate, error) {
-	cert, err := tls.LoadX509KeyPair(LeafCertPath(name), LeafKeyPath(name))
+func LoadLeafTLS(hostname string) (*tls.Certificate, error) {
+	cert, err := tls.LoadX509KeyPair(LeafCertPath(hostname), LeafKeyPath(hostname))
 	if err != nil {
-		return nil, fmt.Errorf("loading cert for %s: %w", name, err)
+		return nil, fmt.Errorf("loading cert for %s: %w", hostname, err)
 	}
 	return &cert, nil
 }
 
-func EnsureLeafCert(name string) error {
-	if LeafExists(name) && !leafNeedsRenewal(name) {
+func EnsureLeafCert(hostname string) error {
+	if LeafExists(hostname) && !leafNeedsRenewal(hostname) {
 		return nil
 	}
-	return GenerateLeafCert(name)
+	return GenerateLeafCert(hostname)
 }
 
-func leafNeedsRenewal(name string) bool {
-	data, err := os.ReadFile(LeafCertPath(name))
+func leafNeedsRenewal(hostname string) bool {
+	data, err := os.ReadFile(LeafCertPath(hostname))
 	if err != nil {
 		return true
 	}

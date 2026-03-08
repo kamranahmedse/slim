@@ -14,8 +14,8 @@ var Version = "0.0.1"
 
 var rootCmd = &cobra.Command{
 	Use:   "slim",
-	Short: "Map custom .test domains to local dev server ports",
-	Long: `slim maps custom .test domains to local dev server ports with HTTPS
+	Short: "Map local domains to dev server ports",
+	Long: `slim maps local domains to local dev server ports with HTTPS
 and WebSocket passthrough for HMR.
 
   slim start myapp --port 3000    # start proxying
@@ -67,7 +67,7 @@ func normalizeName(input string) string {
 func printServices(domains []config.Domain) {
 	maxLen := 0
 	for _, d := range domains {
-		u := len("https://") + len(d.Name) + len(".test")
+		u := len("https://") + len(d.ResolvedHostname())
 		if u > maxLen {
 			maxLen = u
 		}
@@ -81,7 +81,7 @@ func printServices(domains []config.Domain) {
 	arrow := term.Dim.Render("→")
 
 	for _, d := range domains {
-		url := fmt.Sprintf("https://%s.test", d.Name)
+		url := fmt.Sprintf("https://%s", d.ResolvedHostname())
 		fmt.Printf("%s %s  %s  %s\n",
 			term.CheckMark, term.Green.Render(fmt.Sprintf("%-*s", maxLen, url)),
 			arrow, term.Dim.Render(fmt.Sprintf("localhost:%d", d.Port)))

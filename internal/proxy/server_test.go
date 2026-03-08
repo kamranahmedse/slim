@@ -16,7 +16,7 @@ import (
 func TestGetCertificateRejectsUnknownSNI(t *testing.T) {
 	s := &Server{
 		cfg:          &config.Config{},
-		knownDomains: map[string]struct{}{"myapp": {}},
+		knownDomains: map[string]struct{}{"myapp.test": {}},
 		certCache:    map[string]*tls.Certificate{},
 	}
 
@@ -33,9 +33,9 @@ func TestGetCertificateUsesDefaultDomainWhenSNIEmpty(t *testing.T) {
 	cert := &tls.Certificate{}
 	s := &Server{
 		cfg:           &config.Config{},
-		defaultDomain: "myapp",
-		knownDomains:  map[string]struct{}{"myapp": {}},
-		certCache:     map[string]*tls.Certificate{"myapp": cert},
+		defaultDomain: "myapp.test",
+		knownDomains:  map[string]struct{}{"myapp.test": {}},
+		certCache:     map[string]*tls.Certificate{"myapp.test": cert},
 	}
 
 	got, err := s.getCertificate(&tls.ClientHelloInfo{})
@@ -60,7 +60,7 @@ func TestGetCertificateUsesSingleflightOnCacheMiss(t *testing.T) {
 	cert := &tls.Certificate{}
 
 	ensureLeafCertFn = func(name string) error {
-		if name != "myapp" {
+		if name != "myapp.test" {
 			return errors.New("unexpected name")
 		}
 		atomic.AddInt32(&ensureCalls, 1)
@@ -68,7 +68,7 @@ func TestGetCertificateUsesSingleflightOnCacheMiss(t *testing.T) {
 		return nil
 	}
 	loadLeafTLSFn = func(name string) (*tls.Certificate, error) {
-		if name != "myapp" {
+		if name != "myapp.test" {
 			return nil, errors.New("unexpected name")
 		}
 		atomic.AddInt32(&loadCalls, 1)
@@ -77,7 +77,7 @@ func TestGetCertificateUsesSingleflightOnCacheMiss(t *testing.T) {
 
 	s := &Server{
 		cfg:          &config.Config{},
-		knownDomains: map[string]struct{}{"myapp": {}},
+		knownDomains: map[string]struct{}{"myapp.test": {}},
 		certCache:    map[string]*tls.Certificate{},
 	}
 

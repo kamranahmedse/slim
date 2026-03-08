@@ -52,7 +52,7 @@ func Run() Report {
 
 	if cfg != nil {
 		for _, d := range cfg.Domains {
-			results = append(results, checkHostsFile(d.Name))
+			results = append(results, checkHostsFile(d.ResolvedHostname()))
 		}
 	}
 
@@ -60,7 +60,7 @@ func Run() Report {
 
 	if cfg != nil {
 		for _, d := range cfg.Domains {
-			results = append(results, checkLeafCert(d.Name))
+			results = append(results, checkLeafCert(d.ResolvedHostname()))
 		}
 	}
 
@@ -139,8 +139,7 @@ func missingIngressPorts() []string {
 	return missing
 }
 
-func checkHostsFile(domain string) CheckResult {
-	hostname := domain + ".test"
+func checkHostsFile(hostname string) CheckResult {
 	name := "Hosts: " + hostname
 
 	content, err := readFileFn("/etc/hosts")
@@ -168,10 +167,10 @@ func checkDaemon() CheckResult {
 	return CheckResult{Name: name, Status: Pass, Message: "running"}
 }
 
-func checkLeafCert(domain string) CheckResult {
-	name := "Cert: " + domain + ".test"
+func checkLeafCert(hostname string) CheckResult {
+	name := "Cert: " + hostname
 
-	data, err := readFileFn(cert.LeafCertPath(domain))
+	data, err := readFileFn(cert.LeafCertPath(hostname))
 	if err != nil {
 		return CheckResult{Name: name, Status: Fail, Message: "not found"}
 	}

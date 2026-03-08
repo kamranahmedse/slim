@@ -35,6 +35,7 @@ var stopCmd = &cobra.Command{
 
 func stopOne(name string) error {
 	var remainingDomains int
+	var stopped config.Domain
 
 	if err := configWithLockStopFn(func() error {
 		cfg, err := configLoadStopFn()
@@ -42,9 +43,11 @@ func stopOne(name string) error {
 			return err
 		}
 
-		if _, idx := cfg.FindDomain(name); idx == -1 {
-			return fmt.Errorf("%s.test is not running", name)
+		domain, idx := cfg.FindDomain(name)
+		if idx == -1 {
+			return fmt.Errorf("no domain matching %q is running", name)
 		}
+		stopped = *domain
 
 		if err := cfg.RemoveDomain(name); err != nil {
 			return err
@@ -55,7 +58,9 @@ func stopOne(name string) error {
 		return err
 	}
 
-	if err := systemRemoveHostFn(name); err != nil {
+	hostname := stopped.ResolvedHostname()
+
+	if err := systemRemoveHostFn(hostname); err != nil {
 		return fmt.Errorf("updating /etc/hosts: %w", err)
 	}
 
@@ -64,15 +69,15 @@ func stopOne(name string) error {
 			if _, err := daemonSendIPCFn(daemon.Request{Type: daemon.MsgShutdown}); err != nil {
 				return fmt.Errorf("stopping daemon: %w", err)
 			}
-			fmt.Printf("Stopped %s.test (daemon shut down)\n", name)
+			fmt.Printf("Stopped %s (daemon shut down)\n", hostname)
 		} else {
 			if _, err := daemonSendIPCFn(daemon.Request{Type: daemon.MsgReload}); err != nil {
 				return fmt.Errorf("reloading daemon: %w", err)
 			}
-			fmt.Printf("Stopped %s.test\n", name)
+			fmt.Printf("Stopped %s\n", hostname)
 		}
 	} else {
-		fmt.Printf("Stopped %s.test\n", name)
+		fmt.Printf("Stopped %s\n", hostname)
 	}
 
 	return nil
@@ -102,8 +107,8 @@ func stopAll() error {
 	}
 
 	for _, d := range domains {
-		if err := systemRemoveHostFn(d.Name); err != nil {
-			fmt.Printf("Warning: failed to remove %s.test from /etc/hosts: %v\n", d.Name, err)
+		if err := systemRemoveHostFn(d.ResolvedHostname()); err != nil {
+			fmt.Printf("Warning: failed to remove %s from /etc/hosts: %v\n", d.ResolvedHostname(), err)
 		}
 	}
 

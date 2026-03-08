@@ -22,7 +22,7 @@ func TestStopOneDomainNotFound(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected stopOne to fail for missing domain")
 	}
-	if !strings.Contains(err.Error(), "is not running") {
+	if !strings.Contains(err.Error(), "is running") {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
@@ -97,6 +97,62 @@ func TestStopOneSendsReloadWhenDomainsRemain(t *testing.T) {
 	}
 }
 
+func TestStopOneUsesResolvedHostnameForCustomBaseDomain(t *testing.T) {
+	restore := setupStopTestHooks(t)
+	defer restore()
+
+	if err := seedDomains([]config.Domain{{Name: "myapp", Hostname: "local.example.com", Port: 3000}}); err != nil {
+		t.Fatalf("seedDomains: %v", err)
+	}
+
+	removed := make([]string, 0, 1)
+	systemRemoveHostFn = func(name string) error {
+		removed = append(removed, name)
+		return nil
+	}
+	daemonIsRunningFn = func() bool { return false }
+
+	if err := stopOne("myapp"); err != nil {
+		t.Fatalf("stopOne: %v", err)
+	}
+
+	if len(removed) != 1 || removed[0] != "myapp.local.example.com" {
+		t.Fatalf("expected resolved hostname removal, got %v", removed)
+	}
+}
+
+func TestStopOneAcceptsResolvedHostnameForCustomBaseDomain(t *testing.T) {
+	restore := setupStopTestHooks(t)
+	defer restore()
+
+	if err := seedDomains([]config.Domain{{Name: "myapp", Hostname: "local.example.com", Port: 3000}}); err != nil {
+		t.Fatalf("seedDomains: %v", err)
+	}
+
+	removed := make([]string, 0, 1)
+	systemRemoveHostFn = func(name string) error {
+		removed = append(removed, name)
+		return nil
+	}
+	daemonIsRunningFn = func() bool { return false }
+
+	if err := stopOne("myapp.local.example.com"); err != nil {
+		t.Fatalf("stopOne: %v", err)
+	}
+
+	if len(removed) != 1 || removed[0] != "myapp.local.example.com" {
+		t.Fatalf("expected resolved hostname removal, got %v", removed)
+	}
+
+	cfg, err := config.Load()
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if len(cfg.Domains) != 0 {
+		t.Fatalf("expected no remaining domains, got %+v", cfg.Domains)
+	}
+}
+
 func TestStopAllNoDomainsNoDaemon(t *testing.T) {
 	restore := setupStopTestHooks(t)
 	defer restore()
@@ -125,7 +181,7 @@ func TestStopAllRemovesHostsAndSendsShutdown(t *testing.T) {
 	removed := make([]string, 0, 2)
 	systemRemoveHostFn = func(name string) error {
 		removed = append(removed, name)
-		if name == "myapp" {
+		if name == "myapp.test" {
 			return errors.New("remove failed")
 		}
 		return nil

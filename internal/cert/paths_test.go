@@ -33,10 +33,10 @@ func TestCAAndLeafPathHelpers(t *testing.T) {
 	if got, want := CAKeyPath(), filepath.Join(home, ".slim", "ca", "rootCA-key.pem"); got != want {
 		t.Fatalf("CAKeyPath() = %q, want %q", got, want)
 	}
-	if got, want := LeafCertPath("myapp"), filepath.Join(home, ".slim", "certs", "myapp.pem"); got != want {
+	if got, want := LeafCertPath("myapp.test"), filepath.Join(home, ".slim", "certs", "myapp.test.pem"); got != want {
 		t.Fatalf("LeafCertPath() = %q, want %q", got, want)
 	}
-	if got, want := LeafKeyPath("myapp"), filepath.Join(home, ".slim", "certs", "myapp-key.pem"); got != want {
+	if got, want := LeafKeyPath("myapp.test"), filepath.Join(home, ".slim", "certs", "myapp.test-key.pem"); got != want {
 		t.Fatalf("LeafKeyPath() = %q, want %q", got, want)
 	}
 }
@@ -47,7 +47,7 @@ func TestCAExistsAndLeafExists(t *testing.T) {
 	if CAExists() {
 		t.Fatal("expected CAExists false before files are created")
 	}
-	if LeafExists("myapp") {
+	if LeafExists("myapp.test") {
 		t.Fatal("expected LeafExists false before files are created")
 	}
 
@@ -67,13 +67,13 @@ func TestCAExistsAndLeafExists(t *testing.T) {
 	if err := os.MkdirAll(CertsDir(), 0700); err != nil {
 		t.Fatalf("MkdirAll CertsDir: %v", err)
 	}
-	if err := os.WriteFile(LeafCertPath("myapp"), []byte("cert"), 0644); err != nil {
+	if err := os.WriteFile(LeafCertPath("myapp.test"), []byte("cert"), 0644); err != nil {
 		t.Fatalf("WriteFile LeafCertPath: %v", err)
 	}
-	if err := os.WriteFile(LeafKeyPath("myapp"), []byte("key"), 0600); err != nil {
+	if err := os.WriteFile(LeafKeyPath("myapp.test"), []byte("key"), 0600); err != nil {
 		t.Fatalf("WriteFile LeafKeyPath: %v", err)
 	}
-	if !LeafExists("myapp") {
+	if !LeafExists("myapp.test") {
 		t.Fatal("expected LeafExists true when cert and key files exist")
 	}
 }
@@ -107,14 +107,14 @@ func TestEnsureLeafCertAndLoadLeafTLS(t *testing.T) {
 		t.Fatalf("GenerateCA: %v", err)
 	}
 
-	if err := EnsureLeafCert("myapp"); err != nil {
+	if err := EnsureLeafCert("myapp.test"); err != nil {
 		t.Fatalf("EnsureLeafCert: %v", err)
 	}
-	if !LeafExists("myapp") {
+	if !LeafExists("myapp.test") {
 		t.Fatal("expected leaf cert+key files to exist")
 	}
 
-	tlsCert, err := LoadLeafTLS("myapp")
+	tlsCert, err := LoadLeafTLS("myapp.test")
 	if err != nil {
 		t.Fatalf("LoadLeafTLS: %v", err)
 	}
@@ -214,7 +214,7 @@ func writeLeafCertPEM(name string, keyType string, notAfter time.Time) error {
 	template := &x509.Certificate{
 		SerialNumber: serial,
 		Subject: pkix.Name{
-			CommonName: name + ".test",
+			CommonName: name,
 		},
 		NotBefore: time.Now().Add(-time.Hour),
 		NotAfter:  notAfter,

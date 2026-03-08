@@ -23,7 +23,7 @@ func TestBuildHandlerRoutesKnownDomain(t *testing.T) {
 	port := mustPortFromURL(t, upstream.URL)
 	s := &Server{
 		cfg:    &config.Config{},
-		routes: map[string]*domainRouter{"myapp": {defaultPort: port, defaultHandler: newDomainProxy(port, newUpstreamTransport(), false)}},
+		routes: map[string]*domainRouter{"myapp.test": {defaultPort: port, defaultHandler: newDomainProxy(port, newUpstreamTransport(), false)}},
 	}
 
 	req := httptest.NewRequest(http.MethodGet, "https://myapp.test/health?x=1", nil)
@@ -43,6 +43,40 @@ func TestBuildHandlerRoutesKnownDomain(t *testing.T) {
 	case gotHost := <-hostCh:
 		if gotHost != "myapp.test" {
 			t.Fatalf("expected upstream host %q, got %q", "myapp.test", gotHost)
+		}
+	default:
+		t.Fatal("upstream request was not observed")
+	}
+}
+
+func TestBuildHandlerRoutesCustomHostname(t *testing.T) {
+	hostCh := make(chan string, 1)
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hostCh <- r.Host
+		w.WriteHeader(http.StatusAccepted)
+	}))
+	defer upstream.Close()
+
+	port := mustPortFromURL(t, upstream.URL)
+	s := &Server{
+		cfg:    &config.Config{},
+		routes: map[string]*domainRouter{"branch.local.example.com": {defaultPort: port, defaultHandler: newDomainProxy(port, newUpstreamTransport(), false)}},
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "https://branch.local.example.com/health", nil)
+	req.Host = "branch.local.example.com"
+	rr := httptest.NewRecorder()
+
+	buildHandler(s).ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusAccepted {
+		t.Fatalf("expected %d, got %d", http.StatusAccepted, rr.Code)
+	}
+
+	select {
+	case gotHost := <-hostCh:
+		if gotHost != "branch.local.example.com" {
+			t.Fatalf("expected upstream host %q, got %q", "branch.local.example.com", gotHost)
 		}
 	default:
 		t.Fatal("upstream request was not observed")
@@ -73,7 +107,7 @@ func TestBuildHandlerUpstreamDownReturnsBadGateway(t *testing.T) {
 	port := freeTCPPort(t)
 	s := &Server{
 		cfg:    &config.Config{},
-		routes: map[string]*domainRouter{"myapp": {defaultPort: port, defaultHandler: newDomainProxy(port, newUpstreamTransport(), false)}},
+		routes: map[string]*domainRouter{"myapp.test": {defaultPort: port, defaultHandler: newDomainProxy(port, newUpstreamTransport(), false)}},
 	}
 
 	req := httptest.NewRequest(http.MethodGet, "https://myapp.test/", nil)
@@ -139,7 +173,7 @@ func TestPathRouteStripsPrefix(t *testing.T) {
 	s := &Server{
 		cfg: &config.Config{},
 		routes: map[string]*domainRouter{
-			"myapp": {
+			"myapp.test": {
 				defaultPort:    3000,
 				defaultHandler: newDomainProxy(3000, newUpstreamTransport(), false),
 				pathRoutes: []pathRoute{
@@ -187,7 +221,7 @@ func TestCORSHeadersNotAddedByDefault(t *testing.T) {
 	port := mustPortFromURL(t, upstream.URL)
 	s := &Server{
 		cfg:    &config.Config{},
-		routes: map[string]*domainRouter{"myapp": {defaultPort: port, defaultHandler: newDomainProxy(port, newUpstreamTransport(), false)}},
+		routes: map[string]*domainRouter{"myapp.test": {defaultPort: port, defaultHandler: newDomainProxy(port, newUpstreamTransport(), false)}},
 	}
 
 	req := httptest.NewRequest(http.MethodGet, "https://myapp.test/api", nil)
@@ -218,7 +252,7 @@ func TestCORSEnabledStripsUpstreamHeaders(t *testing.T) {
 	port := mustPortFromURL(t, upstream.URL)
 	s := &Server{
 		cfg:    &config.Config{Cors: true},
-		routes: map[string]*domainRouter{"myapp": {defaultPort: port, defaultHandler: newDomainProxy(port, newUpstreamTransport(), true)}},
+		routes: map[string]*domainRouter{"myapp.test": {defaultPort: port, defaultHandler: newDomainProxy(port, newUpstreamTransport(), true)}},
 	}
 
 	req := httptest.NewRequest(http.MethodGet, "https://myapp.test/api", nil)
@@ -247,7 +281,7 @@ func TestCORSEnabledStripsUpstreamHeaders(t *testing.T) {
 func TestCORSEnabledHandlesPreflight(t *testing.T) {
 	s := &Server{
 		cfg:    &config.Config{Cors: true},
-		routes: map[string]*domainRouter{"myapp": {defaultPort: 3000, defaultHandler: newDomainProxy(3000, newUpstreamTransport(), true)}},
+		routes: map[string]*domainRouter{"myapp.test": {defaultPort: 3000, defaultHandler: newDomainProxy(3000, newUpstreamTransport(), true)}},
 	}
 
 	req := httptest.NewRequest(http.MethodOptions, "https://myapp.test/api", nil)

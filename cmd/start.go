@@ -16,26 +16,48 @@ import (
 )
 
 var startPort int
+var startDomain string
 var startLogMode string
 var startCors bool
 var startWait bool
 var startWaitTimeout time.Duration
 var startRoutes []string
 
+var (
+	startEnsureFirstRunFn    = setup.EnsureFirstRun
+	startWithLockFn          = config.WithLock
+	startAddHostFn           = system.AddHost
+	startEnsureLeafCertFn    = cert.EnsureLeafCert
+	startDaemonIsChildFn     = daemon.IsChild
+	startDaemonIsRunningFn   = daemon.IsRunning
+	startNewPortFwdFn        = system.NewPortForwarder
+	startEnsurePortsFn       = setup.EnsureProxyPortsAvailable
+	startDaemonRunDetachedFn = daemon.RunDetached
+	startDaemonWaitFn        = daemon.WaitForDaemon
+	startDaemonSendIPCFn     = daemon.SendIPC
+)
+
 var startCmd = &cobra.Command{
 	Use:   "start [name] --port [port]",
 	Short: "Start proxying a domain",
-	Long: `Map a .test domain to a local port and start proxying.
+	Long: `Map a local domain to a local port and start proxying.
 Runs first-time setup automatically if needed.
 
   slim start myapp --port 3000
-  # https://myapp.test → localhost:3000`,
+  # https://myapp.test → localhost:3000
+  slim start myapp --port 3000 --domain local.example.com`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name := normalizeName(args[0])
+		baseDomain := config.NormalizeHostname(startDomain)
 
 		if err := config.ValidateDomain(name, startPort); err != nil {
 			return err
+		}
+		if baseDomain != "" {
+			if err := config.ValidateDomainName(baseDomain); err != nil {
+				return fmt.Errorf("invalid --domain: %w", err)
+			}
 		}
 		if err := validateStartWaitFlags(cmd.Flags().Changed("timeout"), startWait, startWaitTimeout); err != nil {
 			return err
@@ -51,11 +73,11 @@ Runs first-time setup automatically if needed.
 			return err
 		}
 
-		if err := setup.EnsureFirstRun(); err != nil {
+		if err := startEnsureFirstRunFn(); err != nil {
 			return err
 		}
 
-		if err := config.WithLock(func() error {
+		if err := startWithLockFn(func() error {
 			cfg, err := config.Load()
 			if err != nil {
 				return err
@@ -66,46 +88,48 @@ Runs first-time setup automatically if needed.
 			if startLogMode != "" {
 				cfg.LogMode = strings.ToLower(strings.TrimSpace(startLogMode))
 			}
-			return cfg.SetDomain(name, startPort, routes)
+			return cfg.SetDomainHostname(name, baseDomain, startPort, routes)
 		}); err != nil {
 			return err
 		}
 
-		if err := system.AddHost(name); err != nil {
+		domain := config.Domain{Name: name, Hostname: baseDomain, Port: startPort, Routes: routes}
+
+		if err := startAddHostFn(domain.ResolvedHostname()); err != nil {
 			return fmt.Errorf("updating /etc/hosts: %w", err)
 		}
 
-		if err := cert.EnsureLeafCert(name); err != nil {
+		if err := startEnsureLeafCertFn(domain.ResolvedHostname()); err != nil {
 			return fmt.Errorf("generating certificate: %w", err)
 		}
 
-		if !daemon.IsChild() {
-			pf := system.NewPortForwarder()
-			if shouldReloadPortForwarding(pf, daemon.IsRunning()) {
+		if !startDaemonIsChildFn() {
+			pf := startNewPortFwdFn()
+			if shouldReloadPortForwarding(pf, startDaemonIsRunningFn()) {
 				if err := pf.EnsureLoaded(); err != nil {
 					return fmt.Errorf("loading port forwarding rules: %w", err)
 				}
 			}
 		}
 
-		if !daemon.IsRunning() {
-			if err := setup.EnsureProxyPortsAvailable(); err != nil {
+		if !startDaemonIsRunningFn() {
+			if err := startEnsurePortsFn(); err != nil {
 				return err
 			}
-			if err := daemon.RunDetached(); err != nil {
+			if err := startDaemonRunDetachedFn(); err != nil {
 				return fmt.Errorf("starting daemon: %w", err)
 			}
-			if err := daemon.WaitForDaemon(); err != nil {
+			if err := startDaemonWaitFn(); err != nil {
 				return err
 			}
 		} else {
-			if _, err := daemon.SendIPC(daemon.Request{Type: daemon.MsgReload}); err != nil {
+			if _, err := startDaemonSendIPCFn(daemon.Request{Type: daemon.MsgReload}); err != nil {
 				return fmt.Errorf("reloading daemon: %w", err)
 			}
 		}
 
-		if !daemon.IsChild() {
-			pf := system.NewPortForwarder()
+		if !startDaemonIsChildFn() {
+			pf := startNewPortFwdFn()
 			if shouldReloadPortForwarding(pf, true) {
 				if err := pf.EnsureLoaded(); err != nil {
 					return fmt.Errorf("loading port forwarding rules: %w", err)
@@ -128,7 +152,7 @@ Runs first-time setup automatically if needed.
 			}
 		}
 
-		printServices([]config.Domain{{Name: name, Port: startPort, Routes: routes}})
+		printServices([]config.Domain{domain})
 		return nil
 	},
 }
@@ -167,6 +191,7 @@ func validateStartWaitFlags(timeoutChanged bool, wait bool, timeout time.Duratio
 
 func init() {
 	startCmd.Flags().IntVarP(&startPort, "port", "p", 0, "Local port to proxy to (required)")
+	startCmd.Flags().StringVar(&startDomain, "domain", "", "Base domain to use instead of .test (e.g. local.example.com)")
 	startCmd.Flags().StringArrayVar(&startRoutes, "route", nil, "Route a path to a different port (e.g. /api=8080), repeatable")
 	startCmd.Flags().StringVar(&startLogMode, "log-mode", "", "Access log mode: full|minimal|off")
 	startCmd.Flags().BoolVar(&startCors, "cors", false, "Enable CORS headers on proxied responses")

@@ -122,3 +122,93 @@ func TestDownShutdownsWhenNoDomains(t *testing.T) {
 		t.Fatalf("expected shutdown IPC, got %q", gotType)
 	}
 }
+
+func TestDownRemovesProjectBaseDomainHosts(t *testing.T) {
+	restore := setupDownTestHooks(t)
+	defer restore()
+
+	if err := seedDomains([]config.Domain{
+		{Name: "myapp", Hostname: "local.example.com", Port: 3000},
+		{Name: "other", Port: 9000},
+	}); err != nil {
+		t.Fatalf("seedDomains: %v", err)
+	}
+
+	pc := &project.ProjectConfig{
+		BaseDomain: "local.example.com",
+		Services: []project.Service{
+			{Domain: "myapp", Port: 3000},
+		},
+	}
+
+	downDiscoverFn = func() (*project.ProjectConfig, string, error) {
+		return pc, "/tmp/.slim.yaml", nil
+	}
+	removed := make([]string, 0, 1)
+	downRemoveHostFn = func(host string) error {
+		removed = append(removed, host)
+		return nil
+	}
+	downDaemonRunningFn = func() bool { return false }
+
+	if err := downCmd.RunE(downCmd, nil); err != nil {
+		t.Fatalf("down: %v", err)
+	}
+
+	if len(removed) != 1 || removed[0] != "myapp.local.example.com" {
+		t.Fatalf("expected resolved hostname removal, got %v", removed)
+	}
+
+	cfg, err := config.Load()
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if len(cfg.Domains) != 1 || cfg.Domains[0].Name != "other" {
+		t.Fatalf("unexpected remaining domains: %+v", cfg.Domains)
+	}
+}
+
+func TestDownServiceBaseDomainOverridesProject(t *testing.T) {
+	restore := setupDownTestHooks(t)
+	defer restore()
+
+	if err := seedDomains([]config.Domain{
+		{Name: "myapp", Hostname: "preview.example.com", Port: 3000},
+		{Name: "other", Port: 9000},
+	}); err != nil {
+		t.Fatalf("seedDomains: %v", err)
+	}
+
+	pc := &project.ProjectConfig{
+		BaseDomain: "local.example.com",
+		Services: []project.Service{
+			{Domain: "myapp", BaseDomain: "preview.example.com", Port: 3000},
+		},
+	}
+
+	downDiscoverFn = func() (*project.ProjectConfig, string, error) {
+		return pc, "/tmp/.slim.yaml", nil
+	}
+	removed := make([]string, 0, 1)
+	downRemoveHostFn = func(host string) error {
+		removed = append(removed, host)
+		return nil
+	}
+	downDaemonRunningFn = func() bool { return false }
+
+	if err := downCmd.RunE(downCmd, nil); err != nil {
+		t.Fatalf("down: %v", err)
+	}
+
+	if len(removed) != 1 || removed[0] != "myapp.preview.example.com" {
+		t.Fatalf("expected service override hostname removal, got %v", removed)
+	}
+
+	cfg, err := config.Load()
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if len(cfg.Domains) != 1 || cfg.Domains[0].Name != "other" {
+		t.Fatalf("unexpected remaining domains: %+v", cfg.Domains)
+	}
+}

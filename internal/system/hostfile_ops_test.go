@@ -21,7 +21,7 @@ func TestAddHostAppendsMarkedEntry(t *testing.T) {
 		return nil
 	}
 
-	if err := AddHost("myapp"); err != nil {
+	if err := AddHost("myapp.test"); err != nil {
 		t.Fatalf("AddHost: %v", err)
 	}
 	if wrotePath != hostsPath {
@@ -46,7 +46,7 @@ func TestAddHostNoopWhenEntryAlreadyExists(t *testing.T) {
 		return nil
 	}
 
-	if err := AddHost("myapp"); err != nil {
+	if err := AddHost("myapp.test"); err != nil {
 		t.Fatalf("AddHost: %v", err)
 	}
 	if called {
@@ -74,7 +74,7 @@ func TestRemoveHostRemovesOnlyMarkedMatchingEntry(t *testing.T) {
 		return nil
 	}
 
-	if err := RemoveHost("myapp"); err != nil {
+	if err := RemoveHost("myapp.test"); err != nil {
 		t.Fatalf("RemoveHost: %v", err)
 	}
 	if strings.Contains(wrote, "myapp.test # slim") {
@@ -127,10 +127,10 @@ func TestHostMutatorsPropagateReadErrors(t *testing.T) {
 		return nil, errors.New("read failed")
 	}
 
-	if err := AddHost("myapp"); err == nil {
+	if err := AddHost("myapp.test"); err == nil {
 		t.Fatal("expected AddHost to fail on read error")
 	}
-	if err := RemoveHost("myapp"); err == nil {
+	if err := RemoveHost("myapp.test"); err == nil {
 		t.Fatal("expected RemoveHost to fail on read error")
 	}
 	if err := RemoveAllHosts(); err == nil {

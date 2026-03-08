@@ -14,8 +14,7 @@ var (
 	writeFileElevatedHostFn = writeFileElevated
 )
 
-func AddHost(name string) error {
-	hostname := name + ".test"
+func AddHost(hostname string) error {
 	entry := fmt.Sprintf("127.0.0.1 %s %s", hostname, marker)
 
 	content, err := readFileHostFn(hostsPath)
@@ -31,9 +30,7 @@ func AddHost(name string) error {
 	return writeFileElevatedHostFn(hostsPath, updated)
 }
 
-func RemoveHost(name string) error {
-	hostname := name + ".test"
-
+func RemoveHost(hostname string) error {
 	content, err := readFileHostFn(hostsPath)
 	if err != nil {
 		return fmt.Errorf("reading hosts file: %w", err)

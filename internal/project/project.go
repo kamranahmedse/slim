@@ -17,15 +17,41 @@ var (
 )
 
 type Service struct {
-	Domain string         `yaml:"domain"`
-	Port   int            `yaml:"port"`
-	Routes []config.Route `yaml:"routes,omitempty"`
+	Domain     string         `yaml:"domain"`
+	BaseDomain string         `yaml:"base_domain,omitempty"`
+	Port       int            `yaml:"port"`
+	Routes     []config.Route `yaml:"routes,omitempty"`
 }
 
 type ProjectConfig struct {
-	Services []Service `yaml:"services"`
-	LogMode  string    `yaml:"log_mode,omitempty"`
-	Cors     bool      `yaml:"cors,omitempty"`
+	Services   []Service `yaml:"services"`
+	BaseDomain string    `yaml:"base_domain,omitempty"`
+	LogMode    string    `yaml:"log_mode,omitempty"`
+	Cors       bool      `yaml:"cors,omitempty"`
+}
+
+func (s Service) Name() string {
+	return s.Domain
+}
+
+func (s Service) effectiveBaseDomain(projectBaseDomain string) string {
+	if s.BaseDomain != "" {
+		return config.NormalizeHostname(s.BaseDomain)
+	}
+	return config.NormalizeHostname(projectBaseDomain)
+}
+
+func (s Service) Hostname(projectBaseDomain string) string {
+	return config.ResolveHostname(s.Name(), s.effectiveBaseDomain(projectBaseDomain))
+}
+
+func (s Service) ConfigDomain(projectBaseDomain string) config.Domain {
+	return config.Domain{
+		Name:     s.Name(),
+		Hostname: s.effectiveBaseDomain(projectBaseDomain),
+		Port:     s.Port,
+		Routes:   s.Routes,
+	}
 }
 
 func Find() (string, error) {
@@ -85,16 +111,32 @@ func (pc *ProjectConfig) Validate() error {
 			return err
 		}
 	}
+	if pc.BaseDomain != "" {
+		if err := config.ValidateDomainName(config.NormalizeHostname(pc.BaseDomain)); err != nil {
+			return fmt.Errorf("project base_domain: %w", err)
+		}
+	}
 
-	seen := make(map[string]bool)
+	seenNames := make(map[string]bool)
+	seenHostnames := make(map[string]bool)
 	for _, svc := range pc.Services {
 		if err := config.ValidateDomain(svc.Domain, svc.Port); err != nil {
 			return fmt.Errorf("service %q: %w", svc.Domain, err)
 		}
-		if seen[svc.Domain] {
+		if seenNames[svc.Domain] {
 			return fmt.Errorf("duplicate domain %q", svc.Domain)
 		}
-		seen[svc.Domain] = true
+		seenNames[svc.Domain] = true
+		if svc.BaseDomain != "" {
+			if err := config.ValidateDomainName(config.NormalizeHostname(svc.BaseDomain)); err != nil {
+				return fmt.Errorf("service %q base_domain: %w", svc.Domain, err)
+			}
+		}
+		hostname := svc.Hostname(pc.BaseDomain)
+		if seenHostnames[hostname] {
+			return fmt.Errorf("duplicate domain %q", hostname)
+		}
+		seenHostnames[hostname] = true
 
 		for _, r := range svc.Routes {
 			if err := config.ValidateRoute(r.Path, r.Port); err != nil {

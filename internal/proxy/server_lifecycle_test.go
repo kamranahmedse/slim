@@ -30,8 +30,8 @@ func TestApplyConfigBuildsRoutesAndDefaults(t *testing.T) {
 	if err := s.applyConfig(cfg); err != nil {
 		t.Fatalf("applyConfig: %v", err)
 	}
-	if s.defaultDomain != "myapp" {
-		t.Fatalf("expected default domain myapp, got %q", s.defaultDomain)
+	if s.defaultDomain != "myapp.test" {
+		t.Fatalf("expected default domain myapp.test, got %q", s.defaultDomain)
 	}
 	if len(s.routes) != 2 || len(s.knownDomains) != 2 || len(s.certCache) != 2 {
 		t.Fatalf("expected 2 routes/known/certs, got routes=%d known=%d certs=%d", len(s.routes), len(s.knownDomains), len(s.certCache))
@@ -93,8 +93,8 @@ func TestReloadConfigLoadsFromDisk(t *testing.T) {
 	if len(loaded.Domains) != 1 || loaded.Domains[0].Name != "myapp" {
 		t.Fatalf("unexpected loaded config: %+v", loaded.Domains)
 	}
-	if !s.isKnownDomain("myapp") {
-		t.Fatalf("expected myapp to be known after reload")
+	if !s.isKnownDomain("myapp.test") {
+		t.Fatalf("expected myapp.test to be known after reload")
 	}
 }
 

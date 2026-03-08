@@ -88,6 +88,94 @@ func TestUpStartsDaemonForProjectServices(t *testing.T) {
 	}
 }
 
+func TestUpUsesProjectBaseDomain(t *testing.T) {
+	restore := setupUpTestHooks(t)
+	defer restore()
+
+	pc := &project.ProjectConfig{
+		BaseDomain: "local.example.com",
+		Services: []project.Service{
+			{Domain: "myapp", Port: 3000},
+		},
+	}
+
+	upDiscoverFn = func() (*project.ProjectConfig, string, error) {
+		return pc, "/tmp/.slim.yaml", nil
+	}
+	upEnsureFirstRunFn = func() error { return nil }
+	addedHosts := make([]string, 0, 1)
+	upAddHostFn = func(host string) error {
+		addedHosts = append(addedHosts, host)
+		return nil
+	}
+	upEnsureLeafCertFn = func(string) error { return nil }
+	upDaemonIsRunningFn = func() bool { return false }
+	upDaemonIsChildFn = func() bool { return true }
+	upEnsurePortsFn = func() error { return nil }
+	upDaemonRunDetachedFn = func() error { return nil }
+	upDaemonWaitFn = func() error { return nil }
+
+	if err := upCmd.RunE(upCmd, nil); err != nil {
+		t.Fatalf("up: %v", err)
+	}
+
+	if len(addedHosts) != 1 || addedHosts[0] != "myapp.local.example.com" {
+		t.Fatalf("expected custom resolved hostname, got %v", addedHosts)
+	}
+
+	cfg, err := config.Load()
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if len(cfg.Domains) != 1 || cfg.Domains[0].ResolvedHostname() != "myapp.local.example.com" {
+		t.Fatalf("unexpected stored domains: %+v", cfg.Domains)
+	}
+}
+
+func TestUpServiceBaseDomainOverridesProject(t *testing.T) {
+	restore := setupUpTestHooks(t)
+	defer restore()
+
+	pc := &project.ProjectConfig{
+		BaseDomain: "local.example.com",
+		Services: []project.Service{
+			{Domain: "myapp", BaseDomain: "preview.example.com", Port: 3000},
+		},
+	}
+
+	upDiscoverFn = func() (*project.ProjectConfig, string, error) {
+		return pc, "/tmp/.slim.yaml", nil
+	}
+	upEnsureFirstRunFn = func() error { return nil }
+	addedHosts := make([]string, 0, 1)
+	upAddHostFn = func(host string) error {
+		addedHosts = append(addedHosts, host)
+		return nil
+	}
+	upEnsureLeafCertFn = func(string) error { return nil }
+	upDaemonIsRunningFn = func() bool { return false }
+	upDaemonIsChildFn = func() bool { return true }
+	upEnsurePortsFn = func() error { return nil }
+	upDaemonRunDetachedFn = func() error { return nil }
+	upDaemonWaitFn = func() error { return nil }
+
+	if err := upCmd.RunE(upCmd, nil); err != nil {
+		t.Fatalf("up: %v", err)
+	}
+
+	if len(addedHosts) != 1 || addedHosts[0] != "myapp.preview.example.com" {
+		t.Fatalf("expected service override hostname, got %v", addedHosts)
+	}
+
+	cfg, err := config.Load()
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if len(cfg.Domains) != 1 || cfg.Domains[0].Hostname != "preview.example.com" || cfg.Domains[0].ResolvedHostname() != "myapp.preview.example.com" {
+		t.Fatalf("unexpected stored domains: %+v", cfg.Domains)
+	}
+}
+
 func TestUpReloadsDaemonWhenRunning(t *testing.T) {
 	restore := setupUpTestHooks(t)
 	defer restore()

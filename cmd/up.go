@@ -75,16 +75,8 @@ then start all services defined in it.
 				cfg.LogMode = strings.ToLower(strings.TrimSpace(pc.LogMode))
 			}
 			for _, svc := range pc.Services {
-				if existing, idx := cfg.FindDomain(svc.Domain); existing != nil {
-					cfg.Domains[idx].Port = svc.Port
-					cfg.Domains[idx].Routes = svc.Routes
-				} else {
-					cfg.Domains = append(cfg.Domains, config.Domain{
-						Name:   svc.Domain,
-						Port:   svc.Port,
-						Routes: svc.Routes,
-					})
-				}
+				domain := svc.ConfigDomain(pc.BaseDomain)
+				cfg.SetDomainFields(domain.Name, domain.Hostname, domain.Port, domain.Routes)
 			}
 			return cfg.Save()
 		}); err != nil {
@@ -92,11 +84,12 @@ then start all services defined in it.
 		}
 
 		for _, svc := range pc.Services {
-			if err := upAddHostFn(svc.Domain); err != nil {
-				return fmt.Errorf("updating /etc/hosts for %s: %w", svc.Domain, err)
+			hostname := svc.Hostname(pc.BaseDomain)
+			if err := upAddHostFn(hostname); err != nil {
+				return fmt.Errorf("updating /etc/hosts for %s: %w", hostname, err)
 			}
-			if err := upEnsureLeafCertFn(svc.Domain); err != nil {
-				return fmt.Errorf("generating certificate for %s: %w", svc.Domain, err)
+			if err := upEnsureLeafCertFn(hostname); err != nil {
+				return fmt.Errorf("generating certificate for %s: %w", hostname, err)
 			}
 		}
 
@@ -136,7 +129,7 @@ then start all services defined in it.
 
 		domains := make([]config.Domain, len(pc.Services))
 		for i, svc := range pc.Services {
-			domains[i] = config.Domain{Name: svc.Domain, Port: svc.Port, Routes: svc.Routes}
+			domains[i] = svc.ConfigDomain(pc.BaseDomain)
 		}
 		printServices(domains)
 

@@ -71,6 +71,9 @@ func TestConfigLifecycle(t *testing.T) {
 	if cfg.Domains[0].Name != "myapp" || cfg.Domains[0].Port != 3000 {
 		t.Fatalf("unexpected domain: %+v", cfg.Domains[0])
 	}
+	if got := cfg.Domains[0].ResolvedHostname(); got != "myapp.test" {
+		t.Fatalf("expected default hostname myapp.test, got %q", got)
+	}
 
 	d, idx := cfg.FindDomain("myapp")
 	if d == nil || idx != 0 {
@@ -193,6 +196,120 @@ func TestSetDomainWithRoutes(t *testing.T) {
 	cfg, _ = Load()
 	if len(cfg.Domains[0].Routes) != 0 {
 		t.Fatalf("expected routes to be cleared, got %+v", cfg.Domains[0].Routes)
+	}
+}
+
+func TestSetDomainWithBaseDomain(t *testing.T) {
+	baseDir = t.TempDir()
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+
+	if err := cfg.SetDomainHostname("myapp", "local.example.com", 3000, nil); err != nil {
+		t.Fatalf("SetDomainHostname: %v", err)
+	}
+
+	cfg, _ = Load()
+	if got := cfg.Domains[0].Hostname; got != "local.example.com" {
+		t.Fatalf("expected stored base domain, got %q", got)
+	}
+	if got := cfg.Domains[0].ResolvedHostname(); got != "myapp.local.example.com" {
+		t.Fatalf("expected resolved hostname, got %q", got)
+	}
+
+	d, idx := cfg.FindDomain("myapp.local.example.com")
+	if d == nil || idx != 0 {
+		t.Fatalf("FindDomain by hostname: got %v at %d", d, idx)
+	}
+}
+
+func TestFindDomainByResolvedHostname(t *testing.T) {
+	baseDir = t.TempDir()
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+
+	// Simple domain: findable by name and by resolved hostname
+	if err := cfg.SetDomain("myapp", 3000, nil); err != nil {
+		t.Fatalf("SetDomain: %v", err)
+	}
+	cfg, _ = Load()
+
+	d, idx := cfg.FindDomain("myapp")
+	if d == nil || idx != 0 {
+		t.Fatalf("FindDomain by name: got %v at %d", d, idx)
+	}
+
+	d, idx = cfg.FindDomain("myapp.test")
+	if d == nil || idx != 0 {
+		t.Fatalf("FindDomain by resolved hostname: got %v at %d", d, idx)
+	}
+
+	// Custom base domain: findable by name and by resolved hostname
+	if err := cfg.SetDomainHostname("api", "local.example.com", 8080, nil); err != nil {
+		t.Fatalf("SetDomainHostname: %v", err)
+	}
+	cfg, _ = Load()
+
+	d, idx = cfg.FindDomain("api")
+	if d == nil || idx != 1 {
+		t.Fatalf("FindDomain custom by name: got %v at %d", d, idx)
+	}
+
+	d, idx = cfg.FindDomain("api.local.example.com")
+	if d == nil || idx != 1 {
+		t.Fatalf("FindDomain custom by hostname: got %v at %d", d, idx)
+	}
+
+	// Non-existent
+	d, idx = cfg.FindDomain("nope.example.com")
+	if d != nil || idx != -1 {
+		t.Fatalf("FindDomain nonexistent: got %v at %d", d, idx)
+	}
+}
+
+func TestRemoveDomainByHostname(t *testing.T) {
+	baseDir = t.TempDir()
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+
+	if err := cfg.SetDomainHostname("api", "local.example.com", 8080, nil); err != nil {
+		t.Fatalf("SetDomainHostname: %v", err)
+	}
+	cfg, _ = Load()
+
+	// Remove by hostname should work since FindDomain matches on ResolvedHostname
+	if err := cfg.RemoveDomain("api.local.example.com"); err != nil {
+		t.Fatalf("RemoveDomain by hostname: %v", err)
+	}
+	cfg, _ = Load()
+	if len(cfg.Domains) != 0 {
+		t.Fatalf("expected 0 domains after remove, got %d", len(cfg.Domains))
+	}
+}
+
+func TestResolveHostname(t *testing.T) {
+	tests := []struct {
+		name       string
+		baseDomain string
+		want       string
+	}{
+		{name: "myapp", want: "myapp.test"},
+		{name: "myapp", baseDomain: "local.example.com", want: "myapp.local.example.com"},
+		{name: "myapp", baseDomain: ".local.example.com.", want: "myapp.local.example.com"},
+	}
+
+	for _, tt := range tests {
+		if got := ResolveHostname(tt.name, tt.baseDomain); got != tt.want {
+			t.Fatalf("ResolveHostname(%q, %q) = %q, want %q", tt.name, tt.baseDomain, got, tt.want)
+		}
 	}
 }
 

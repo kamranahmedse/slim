@@ -14,9 +14,10 @@ import (
 var validLabel = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]*[a-z0-9])?$`)
 
 const (
-	LogModeFull    = "full"
-	LogModeMinimal = "minimal"
-	LogModeOff     = "off"
+	LogModeFull       = "full"
+	LogModeMinimal    = "minimal"
+	LogModeOff        = "off"
+	DefaultBaseDomain = "test"
 )
 
 type Route struct {
@@ -25,9 +26,12 @@ type Route struct {
 }
 
 type Domain struct {
-	Name   string  `yaml:"name"`
-	Port   int     `yaml:"port"`
-	Routes []Route `yaml:"routes,omitempty"`
+	Name string `yaml:"name"`
+	// Hostname stores the base domain suffix (for example, "local.example.com").
+	// The field name is kept for on-disk compatibility with existing config files.
+	Hostname string  `yaml:"hostname,omitempty"`
+	Port     int     `yaml:"port"`
+	Routes   []Route `yaml:"routes,omitempty"`
 }
 
 type Config struct {
@@ -61,7 +65,29 @@ func (d *Domain) MatchRoute(reqPath string) int {
 	return bestPort
 }
 
-func ValidateDomain(name string, port int) error {
+func DefaultHostname(name string) string {
+	return ResolveHostname(name, "")
+}
+
+// NormalizeHostname lowercases, trims whitespace, and removes leading/trailing dots.
+func NormalizeHostname(h string) string {
+	h = strings.ToLower(strings.TrimSpace(h))
+	return strings.Trim(h, ".")
+}
+
+func ResolveHostname(name string, baseDomain string) string {
+	baseDomain = NormalizeHostname(baseDomain)
+	if baseDomain == "" {
+		baseDomain = DefaultBaseDomain
+	}
+	return name + "." + baseDomain
+}
+
+func (d Domain) ResolvedHostname() string {
+	return ResolveHostname(d.Name, d.Hostname)
+}
+
+func ValidateDomainName(name string) error {
 	if name == "" {
 		return fmt.Errorf("domain name cannot be empty")
 	}
@@ -75,6 +101,13 @@ func ValidateDomain(name string, port int) error {
 		if !validLabel.MatchString(label) {
 			return fmt.Errorf("invalid domain name %q: labels must be lowercase alphanumeric with hyphens", name)
 		}
+	}
+	return nil
+}
+
+func ValidateDomain(name string, port int) error {
+	if err := ValidateDomainName(name); err != nil {
+		return err
 	}
 	if port < 1 || port > 65535 {
 		return fmt.Errorf("invalid port %d: must be between 1 and 65535", port)
@@ -132,9 +165,12 @@ func (c *Config) Save() error {
 	return os.WriteFile(Path(), data, 0644)
 }
 
+// FindDomain looks up a domain by Name first, then by ResolvedHostname.
+// Name match takes priority because it appears first in the check.
 func (c *Config) FindDomain(name string) (*Domain, int) {
+	name = NormalizeHostname(name)
 	for i := range c.Domains {
-		if c.Domains[i].Name == name {
+		if c.Domains[i].Name == name || c.Domains[i].ResolvedHostname() == name {
 			return &c.Domains[i], i
 		}
 	}
@@ -142,19 +178,40 @@ func (c *Config) FindDomain(name string) (*Domain, int) {
 }
 
 func (c *Config) SetDomain(name string, port int, routes []Route) error {
+	return c.SetDomainHostname(name, "", port, routes)
+}
+
+// SetDomainFields updates or appends a domain in memory without saving.
+// Use this for batch updates, then call Save() once at the end.
+func (c *Config) SetDomainFields(name string, hostname string, port int, routes []Route) {
+	hostname = NormalizeHostname(hostname)
 	if existing, idx := c.FindDomain(name); existing != nil {
+		c.Domains[idx].Name = name
+		c.Domains[idx].Hostname = hostname
+		c.Domains[idx].Port = port
+		c.Domains[idx].Routes = routes
+		return
+	}
+	c.Domains = append(c.Domains, Domain{Name: name, Hostname: hostname, Port: port, Routes: routes})
+}
+
+func (c *Config) SetDomainHostname(name string, hostname string, port int, routes []Route) error {
+	hostname = NormalizeHostname(hostname)
+	if existing, idx := c.FindDomain(name); existing != nil {
+		c.Domains[idx].Name = name
+		c.Domains[idx].Hostname = hostname
 		c.Domains[idx].Port = port
 		c.Domains[idx].Routes = routes
 		return c.Save()
 	}
-	c.Domains = append(c.Domains, Domain{Name: name, Port: port, Routes: routes})
+	c.Domains = append(c.Domains, Domain{Name: name, Hostname: hostname, Port: port, Routes: routes})
 	return c.Save()
 }
 
 func (c *Config) RemoveDomain(name string) error {
 	_, idx := c.FindDomain(name)
 	if idx == -1 {
-		return fmt.Errorf("domain %s.test not found", name)
+		return fmt.Errorf("domain %s not found", name)
 	}
 	c.Domains = append(c.Domains[:idx], c.Domains[idx+1:]...)
 	return c.Save()

@@ -54,44 +54,43 @@ func NewServer(cfg *config.Config) *Server {
 }
 
 func (s *Server) getCertificate(hello *tls.ClientHelloInfo) (*tls.Certificate, error) {
-	var name string
+	var hostname string
 	if hello.ServerName == "" {
-		name = s.defaultConfiguredDomain()
-		if name == "" {
+		hostname = s.defaultConfiguredDomain()
+		if hostname == "" {
 			return nil, fmt.Errorf("no domains configured")
 		}
 	} else {
-		var ok bool
-		name, ok = localDomainFromHost(hello.ServerName)
-		if !ok {
+		hostname = normalizeHost(hello.ServerName)
+		if hostname == "" {
 			return nil, fmt.Errorf("unsupported server name %q", hello.ServerName)
 		}
 	}
 
-	if !s.isKnownDomain(name) {
-		return nil, fmt.Errorf("domain %s.test is not configured", name)
+	if !s.isKnownDomain(hostname) {
+		return nil, fmt.Errorf("domain %s is not configured", hostname)
 	}
 
-	if tlsCert := s.cachedCertificate(name); tlsCert != nil {
+	if tlsCert := s.cachedCertificate(hostname); tlsCert != nil {
 		return tlsCert, nil
 	}
 
-	val, err, _ := s.certGroup.Do(name, func() (any, error) {
-		if tlsCert := s.cachedCertificate(name); tlsCert != nil {
+	val, err, _ := s.certGroup.Do(hostname, func() (any, error) {
+		if tlsCert := s.cachedCertificate(hostname); tlsCert != nil {
 			return tlsCert, nil
 		}
 
-		if err := ensureLeafCertFn(name); err != nil {
-			return nil, fmt.Errorf("ensuring cert for %s: %w", name, err)
+		if err := ensureLeafCertFn(hostname); err != nil {
+			return nil, fmt.Errorf("ensuring cert for %s: %w", hostname, err)
 		}
 
-		tlsCert, err := loadLeafTLSFn(name)
+		tlsCert, err := loadLeafTLSFn(hostname)
 		if err != nil {
 			return nil, err
 		}
 
 		s.certMu.Lock()
-		s.certCache[name] = tlsCert
+		s.certCache[hostname] = tlsCert
 		s.certMu.Unlock()
 
 		return tlsCert, nil
@@ -102,7 +101,7 @@ func (s *Server) getCertificate(hello *tls.ClientHelloInfo) (*tls.Certificate, e
 
 	tlsCert, ok := val.(*tls.Certificate)
 	if !ok {
-		return nil, fmt.Errorf("invalid certificate cache entry for %s", name)
+		return nil, fmt.Errorf("invalid certificate cache entry for %s", hostname)
 	}
 	return tlsCert, nil
 }
@@ -161,7 +160,7 @@ func (s *Server) Start() error {
 	s.cfgMu.RUnlock()
 
 	for _, d := range domains {
-		log.Info("  %s.test → localhost:%d", d.Name, d.Port)
+		log.Info("  %s → localhost:%d", d.ResolvedHostname(), d.Port)
 		for _, r := range d.Routes {
 			log.Info("    %s → localhost:%d", r.Path, r.Port)
 		}
@@ -217,16 +216,17 @@ func (s *Server) applyConfig(cfg *config.Config) error {
 	defaultDomain := ""
 
 	for i, d := range cfg.Domains {
+		hostname := d.ResolvedHostname()
 		if i == 0 {
-			defaultDomain = d.Name
+			defaultDomain = hostname
 		}
 
-		if err := ensureLeafCertFn(d.Name); err != nil {
-			return fmt.Errorf("ensuring cert for %s: %w", d.Name, err)
+		if err := ensureLeafCertFn(hostname); err != nil {
+			return fmt.Errorf("ensuring cert for %s: %w", hostname, err)
 		}
-		tlsCert, err := loadLeafTLSFn(d.Name)
+		tlsCert, err := loadLeafTLSFn(hostname)
 		if err != nil {
-			return fmt.Errorf("loading cert for %s: %w", d.Name, err)
+			return fmt.Errorf("loading cert for %s: %w", hostname, err)
 		}
 
 		router := &domainRouter{
@@ -245,9 +245,9 @@ func (s *Server) applyConfig(cfg *config.Config) error {
 			return len(router.pathRoutes[i].prefix) > len(router.pathRoutes[j].prefix)
 		})
 
-		routes[d.Name] = router
-		knownDomains[d.Name] = struct{}{}
-		certCache[d.Name] = tlsCert
+		routes[hostname] = router
+		knownDomains[hostname] = struct{}{}
+		certCache[hostname] = tlsCert
 	}
 
 	s.cfgMu.Lock()

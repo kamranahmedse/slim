@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/kamranahmedse/slim/internal/config"
 	"github.com/kamranahmedse/slim/internal/log"
 )
 
@@ -37,14 +38,13 @@ func (dr *domainRouter) match(reqPath string) (int, http.Handler) {
 func buildHandler(s *Server) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		host := normalizeHost(r.Host)
-		name, ok := localDomainFromHost(host)
-		if !ok {
+		if host == "" {
 			http.NotFound(w, r)
 			return
 		}
 
 		s.cfgMu.RLock()
-		router, found := s.routes[name]
+		router, found := s.routes[host]
 		cors := s.cfg.Cors
 		s.cfgMu.RUnlock()
 		if !found {
@@ -120,8 +120,7 @@ func stripCORSHeaders(resp *http.Response) error {
 }
 
 func normalizeHost(host string) string {
-	host = strings.ToLower(strings.TrimSpace(host))
-	host = strings.TrimSuffix(host, ".")
+	host = config.NormalizeHostname(host)
 
 	if parsedHost, _, err := net.SplitHostPort(host); err == nil {
 		host = parsedHost
@@ -133,16 +132,6 @@ func normalizeHost(host string) string {
 
 	host = strings.Trim(host, "[]")
 	return strings.TrimSuffix(host, ".")
-}
-
-func localDomainFromHost(host string) (string, bool) {
-	host = normalizeHost(host)
-	if !strings.HasSuffix(host, ".test") {
-		return "", false
-	}
-
-	name := strings.TrimSuffix(host, ".test")
-	return name, name != ""
 }
 
 type statusRecorder struct {
@@ -171,4 +160,3 @@ func (r *statusRecorder) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 	}
 	return nil, nil, fmt.Errorf("upstream ResponseWriter does not support hijacking")
 }
-

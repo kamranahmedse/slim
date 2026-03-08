@@ -6,7 +6,68 @@ import (
 	"time"
 
 	"github.com/kamranahmedse/slim/internal/config"
+	"github.com/kamranahmedse/slim/internal/daemon"
 )
+
+func setupStartTestHooks(t *testing.T) func() {
+	t.Helper()
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	if err := config.Init(); err != nil {
+		t.Fatalf("config.Init: %v", err)
+	}
+
+	prevEnsureFirstRun := startEnsureFirstRunFn
+	prevWithLock := startWithLockFn
+	prevAddHost := startAddHostFn
+	prevLeafCert := startEnsureLeafCertFn
+	prevIsChild := startDaemonIsChildFn
+	prevIsRunning := startDaemonIsRunningFn
+	prevNewPortFwd := startNewPortFwdFn
+	prevEnsurePorts := startEnsurePortsFn
+	prevRunDetached := startDaemonRunDetachedFn
+	prevWait := startDaemonWaitFn
+	prevSendIPC := startDaemonSendIPCFn
+
+	prevPort := startPort
+	prevDomain := startDomain
+	prevLogMode := startLogMode
+	prevCors := startCors
+	prevWaitEnabled := startWait
+	prevWaitTimeout := startWaitTimeout
+	prevRoutes := append([]string(nil), startRoutes...)
+
+	startWithLockFn = config.WithLock
+	startPort = 0
+	startDomain = ""
+	startLogMode = ""
+	startCors = false
+	startWait = false
+	startWaitTimeout = 30 * time.Second
+	startRoutes = nil
+
+	return func() {
+		startEnsureFirstRunFn = prevEnsureFirstRun
+		startWithLockFn = prevWithLock
+		startAddHostFn = prevAddHost
+		startEnsureLeafCertFn = prevLeafCert
+		startDaemonIsChildFn = prevIsChild
+		startDaemonIsRunningFn = prevIsRunning
+		startNewPortFwdFn = prevNewPortFwd
+		startEnsurePortsFn = prevEnsurePorts
+		startDaemonRunDetachedFn = prevRunDetached
+		startDaemonWaitFn = prevWait
+		startDaemonSendIPCFn = prevSendIPC
+
+		startPort = prevPort
+		startDomain = prevDomain
+		startLogMode = prevLogMode
+		startCors = prevCors
+		startWait = prevWaitEnabled
+		startWaitTimeout = prevWaitTimeout
+		startRoutes = prevRoutes
+	}
+}
 
 func TestParseRouteFlags(t *testing.T) {
 	tests := []struct {
@@ -125,5 +186,88 @@ func TestValidateStartWaitFlags(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestStartUsesBaseDomainFlag(t *testing.T) {
+	restore := setupStartTestHooks(t)
+	defer restore()
+
+	startPort = 3000
+	startDomain = "local.example.com"
+
+	startEnsureFirstRunFn = func() error { return nil }
+	addedHosts := make([]string, 0, 1)
+	startAddHostFn = func(host string) error {
+		addedHosts = append(addedHosts, host)
+		return nil
+	}
+	issuedCerts := make([]string, 0, 1)
+	startEnsureLeafCertFn = func(host string) error {
+		issuedCerts = append(issuedCerts, host)
+		return nil
+	}
+	startDaemonIsChildFn = func() bool { return true }
+	startDaemonIsRunningFn = func() bool { return true }
+
+	var gotType daemon.MessageType
+	startDaemonSendIPCFn = func(req daemon.Request) (*daemon.Response, error) {
+		gotType = req.Type
+		return &daemon.Response{OK: true}, nil
+	}
+
+	if err := startCmd.RunE(startCmd, []string{"myapp"}); err != nil {
+		t.Fatalf("start: %v", err)
+	}
+
+	if gotType != daemon.MsgReload {
+		t.Fatalf("expected reload IPC, got %q", gotType)
+	}
+	if len(addedHosts) != 1 || addedHosts[0] != "myapp.local.example.com" {
+		t.Fatalf("expected resolved hostname host entry, got %v", addedHosts)
+	}
+	if len(issuedCerts) != 1 || issuedCerts[0] != "myapp.local.example.com" {
+		t.Fatalf("expected resolved hostname certificate, got %v", issuedCerts)
+	}
+
+	cfg, err := config.Load()
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if len(cfg.Domains) != 1 {
+		t.Fatalf("expected 1 stored domain, got %d", len(cfg.Domains))
+	}
+	if cfg.Domains[0].Name != "myapp" {
+		t.Fatalf("expected stored name %q, got %q", "myapp", cfg.Domains[0].Name)
+	}
+	if cfg.Domains[0].Hostname != "local.example.com" {
+		t.Fatalf("expected stored base domain %q, got %q", "local.example.com", cfg.Domains[0].Hostname)
+	}
+	if got := cfg.Domains[0].ResolvedHostname(); got != "myapp.local.example.com" {
+		t.Fatalf("expected resolved hostname %q, got %q", "myapp.local.example.com", got)
+	}
+}
+
+func TestStartRejectsInvalidBaseDomain(t *testing.T) {
+	restore := setupStartTestHooks(t)
+	defer restore()
+
+	startPort = 3000
+	startDomain = "local_example.com"
+
+	err := startCmd.RunE(startCmd, []string{"myapp"})
+	if err == nil {
+		t.Fatal("expected invalid --domain error")
+	}
+	if !strings.Contains(err.Error(), "invalid --domain") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	cfg, loadErr := config.Load()
+	if loadErr != nil {
+		t.Fatalf("Load: %v", loadErr)
+	}
+	if len(cfg.Domains) != 0 {
+		t.Fatalf("expected config to remain empty, got %+v", cfg.Domains)
 	}
 }

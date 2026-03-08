@@ -23,6 +23,7 @@ var logsCmd = &cobra.Command{
 
   slim logs             # all domains
   slim logs myapp       # only myapp.test
+  slim logs myapp.local.example.com
   slim logs -f          # follow (like tail -f)
   slim logs --flush     # clear log file`,
 	Args: cobra.MaximumNArgs(1),
@@ -56,7 +57,19 @@ var logsCmd = &cobra.Command{
 
 		filter := ""
 		if len(args) > 0 {
-			filter = normalizeName(args[0]) + ".test"
+			query := normalizeName(args[0])
+			if cfg, err := config.Load(); err == nil {
+				if d, _ := cfg.FindDomain(query); d != nil {
+					filter = d.ResolvedHostname()
+				}
+			}
+			if filter == "" {
+				if strings.Contains(query, ".") {
+					filter = query
+				} else {
+					filter = config.DefaultHostname(query)
+				}
+			}
 		}
 
 		if logsFollow {

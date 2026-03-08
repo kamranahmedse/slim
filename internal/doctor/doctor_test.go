@@ -109,7 +109,7 @@ func TestCheckHostsFile(t *testing.T) {
 	readFileFn = func(path string) ([]byte, error) {
 		return []byte("127.0.0.1 myapp.test # slim\n"), nil
 	}
-	r := checkHostsFile("myapp")
+	r := checkHostsFile("myapp.test")
 	if r.Status != Pass {
 		t.Fatalf("expected Pass, got %v: %s", r.Status, r.Message)
 	}
@@ -117,7 +117,7 @@ func TestCheckHostsFile(t *testing.T) {
 	readFileFn = func(path string) ([]byte, error) {
 		return []byte("127.0.0.1 localhost\n"), nil
 	}
-	r = checkHostsFile("myapp")
+	r = checkHostsFile("myapp.test")
 	if r.Status != Fail {
 		t.Fatalf("expected Fail, got %v: %s", r.Status, r.Message)
 	}
@@ -183,13 +183,13 @@ func TestCheckLeafCert(t *testing.T) {
 
 	certPEM := generateTestCertPEM(t, time.Now().Add(365*24*time.Hour))
 	readFileFn = func(path string) ([]byte, error) { return certPEM, nil }
-	r := checkLeafCert("myapp")
+	r := checkLeafCert("myapp.test")
 	if r.Status != Pass {
 		t.Fatalf("expected Pass, got %v: %s", r.Status, r.Message)
 	}
 
 	readFileFn = func(path string) ([]byte, error) { return nil, os.ErrNotExist }
-	r = checkLeafCert("myapp")
+	r = checkLeafCert("myapp.test")
 	if r.Status != Fail {
 		t.Fatalf("expected Fail for missing cert, got %v: %s", r.Status, r.Message)
 	}
