@@ -2,7 +2,6 @@ package setup
 
 import (
 	"fmt"
-	"net"
 
 	"github.com/kamranahmedse/slim/internal/cert"
 	"github.com/kamranahmedse/slim/internal/config"
@@ -54,23 +53,5 @@ func EnsureFirstRun() error {
 }
 
 func EnsureProxyPortsAvailable() error {
-	addrs := []string{
-		fmt.Sprintf(":%d", config.ProxyHTTPPort),
-		fmt.Sprintf(":%d", config.ProxyHTTPSPort),
-	}
-	for _, addr := range addrs {
-		if err := ensurePortAvailable(addr); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func ensurePortAvailable(addr string) error {
-	ln, err := net.Listen("tcp", addr)
-	if err != nil {
-		return fmt.Errorf("proxy listener port %s is unavailable: %w (another local proxy/old daemon may already be running)", addr, err)
-	}
-	_ = ln.Close()
 	return nil
 }
