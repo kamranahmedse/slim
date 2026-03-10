@@ -1,8 +1,4 @@
-<p align="center">
-  <img src="docs/public/favicon.png" alt="Slim logo" width="64" height="64" />
-</p>
-
-<h1 align="center">Slim</h1>
+<h1 align="center">⚡️ Slim</h1>
 
 <p align="center">
   Simple command to get clean HTTPS local domains for your projects
